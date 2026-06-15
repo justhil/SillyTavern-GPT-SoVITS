@@ -4,9 +4,10 @@
 
 services:
   genie-tts:
+    profiles: ["legacy-genie-docker"]
     image: python:3.11-slim
     container_name: genie-tts
-    restart: unless-stopped
+    restart: "no"
     network_mode: host
     volumes:
       - ${GENIE_ROOT:-/www/genie}:/www/genie

@@ -6,9 +6,8 @@ git pull origin main 2>/dev/null || true
 
 export TTS_ROOT GENIE_ROOT="${GENIE_ROOT:-/www/genie}"
 
-echo "[1] Genie：宿主机 systemd（slim 容器无法执行宿主机 venv）"
-docker stop genie-tts 2>/dev/null || true
-docker rm genie-tts 2>/dev/null || true
+echo "[1] Genie：宿主机 systemd（勿用 genie-tts Docker）"
+bash deploy/vps-stop-genie-container.sh
 if ! systemctl is-active genie-tts >/dev/null 2>&1; then
   systemctl start genie-tts 2>/dev/null || true
   sleep 2
