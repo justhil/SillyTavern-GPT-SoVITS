@@ -36,7 +36,8 @@ export function getDashboardHTML(data) {
                             <input type="checkbox" id="tts-remote-switch" class="tts-toggle" ${isRemote ? 'checked' : ''}>
                         </label>
                         <div id="tts-remote-input-area" style="display:${isRemote ? 'block' : 'none'}; margin-top:10px; padding-top:10px; border-top:1px dashed #444;">
-                            <div class="tts-input-label">电脑 IP</div>
+                            <div class="tts-input-label">中间件所在电脑 IP（端口固定 3000）</div>
+                            <div style="font-size:11px;color:#888;margin-bottom:6px;">Genie API 的 :8000 在 Admin 里配，不要写在这里</div>
                             <div style="display:flex; gap:8px;">
                                 <input type="text" id="tts-remote-ip" class="tts-modern-input" value="${remoteIP}" placeholder="192.168.x.x">
                                 <button id="tts-save-remote" class="btn-primary">保存</button>

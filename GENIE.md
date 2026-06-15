@@ -79,4 +79,13 @@ pip install -r requirements.txt
 python manager.py
 ```
 
-SillyTavern 扩展里把中间件地址指到 `http://<本机IP>:3000`（与原版相同）。
+SillyTavern 扩展里连接的是 **中间件 `http://<IP>:3000`**（`python manager.py`），**不是** Genie 的 `:8000`。
+
+### 连不上「插件后端」时
+
+| 填哪里 | 填什么 |
+|--------|--------|
+| 酒馆 TTS 面板 / 救援框 / 远程 IP | 跑 **manager.py** 的机器 IP，**只填 IP**（会自动用 **3000**） |
+| Admin → 系统设置 → Genie TTS API | Genie 地址，如 `http://107.173.140.30:8000` |
+
+若曾把 `http://107.173.140.30:8000` 填进远程 IP，请改成 **`107.173.140.30`** 或本机局域网 IP，保存刷新。

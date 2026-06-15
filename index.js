@@ -22,34 +22,11 @@ import { LLM_Client } from './frontend/js/llm_client.js';
 import { TTS_Mobile } from './frontend/js/mobile_ui.js';
 import { WebSocketManager } from './frontend/js/websocket_manager.js';
 import { ChatEventListener } from './frontend/js/chat_event_listener.js';
+import { resolveApiHost, normalizeRemoteHost, managerApiBase } from './frontend/js/connection_host.js';
 
-// ================= 1. 配置区域 =================
-const lsConfig = localStorage.getItem('tts_plugin_remote_config');
-let remoteConfig = lsConfig ? JSON.parse(lsConfig) : { useRemote: false, ip: "" };
-let apiHost = "127.0.0.1";
-
-if (remoteConfig.useRemote && remoteConfig.ip) {
-    apiHost = remoteConfig.ip;
-} else {
-    const current = window.location.hostname;
-    // 正则匹配：192.168.x.x / 10.x.x.x / 172.16-31.x.x / IPv6
-    const isLanOrIPv6 = /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[0-1])\.|:/.test(current);
-
-    if (current === 'localhost' || current === '127.0.0.1') {
-        apiHost = '127.0.0.1';
-    } else if (isLanOrIPv6) {
-        apiHost = current; // 软路由/局域网环境：直接使用当前 IP
-    } else {
-        apiHost = '127.0.0.1'; // 公网域名/其他环境：安全回退到本地
-    }
-}
-
-// IPv6 格式修正
-if (apiHost.includes(':') && !apiHost.startsWith('[')) {
-    apiHost = `[${apiHost}]`;
-}
-
-const MANAGER_API = `http://${apiHost}:3000`;
+// ================= 1. 配置区域（中间件 :3000，不是 Genie :8000）=================
+const apiHost = resolveApiHost();
+const MANAGER_API = managerApiBase(apiHost);
 
 // ================= 暴露模块到 window 对象 (向后兼容) =================
 // 由于部分模块内部仍使用 window.TTS_* 引用,需要暴露到全局
@@ -351,10 +328,10 @@ function showEmergencyConfig(currentApi) {
             font-family: sans-serif; font-size: 14px; border: 1px solid #ff7675;
             max-width: 250px;
         ">
-            <div style="font-weight:bold; color:#ff7675; margin-bottom:8px;">⚠️ 无法连接插件后端，请检查是否开启插件后端</div>
-            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>请手动输入电脑 IP：</div>
+            <div style="font-weight:bold; color:#ff7675; margin-bottom:8px;">⚠️ 无法连接插件后端</div>
+            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>请确认本机已运行 <code style="color:#dfe6e9">python manager.py</code>（端口 <b>3000</b>）。<br><span style="color:#fdcb6e">不要填 Genie 的 :8000</span>，只填运行中间件的电脑 IP：</div>
 
-            <input type="text" id="tts-emergency-ip" placeholder="例如: 192.168.1.5"
+            <input type="text" id="tts-emergency-ip" placeholder="例如: 192.168.1.5 或 107.173.140.30"
                 style="width:100%; box-sizing:border-box; padding:5px; margin-bottom:8px; border-radius:4px; border:none;">
 
             <button id="tts-emergency-save" style="
@@ -386,9 +363,11 @@ function showEmergencyConfig(currentApi) {
         const ip = $('#tts-emergency-ip').val().trim();
         if (!ip) return alert("请输入 IP");
 
+        const host = normalizeRemoteHost(ip);
+        if (!host) return alert('IP 无效');
         localStorage.setItem('tts_plugin_remote_config', JSON.stringify({
             useRemote: true,
-            ip: ip
+            ip: host
         }));
 
         alert(`设置已保存: ${ip}\n页面即将刷新...`);
