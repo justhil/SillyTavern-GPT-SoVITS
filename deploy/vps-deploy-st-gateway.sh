@@ -6,8 +6,19 @@ git pull origin main 2>/dev/null || true
 
 export TTS_ROOT GENIE_ROOT="${GENIE_ROOT:-/www/genie}"
 
-echo "[1] TTS + Genie 容器"
-docker compose -f docker-compose.stack.yml up -d
+echo "[1] Genie：优先宿主机 systemd（避免容器内 pip 编译失败）"
+if systemctl is-active genie-tts >/dev/null 2>&1; then
+  echo "  使用宿主机 genie-tts :8000"
+  docker compose -f docker-compose.stack.host-genie.yml up -d --build tts-manager
+elif [[ -x /www/genie/venv/bin/python && -f /www/genie/run_server.py ]]; then
+  echo "  使用 Docker genie-tts（挂载宿主机 venv）"
+  docker compose -f docker-compose.stack.yml up -d
+else
+  echo "  启动宿主机 genie..."
+  systemctl start genie-tts || true
+  sleep 2
+  docker compose -f docker-compose.stack.host-genie.yml up -d --build tts-manager
+fi
 
 echo "[2] Nginx 反代 st-gateway :46939"
 docker compose -f docker-compose.gateway.yml up -d --force-recreate

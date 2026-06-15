@@ -1,21 +1,8 @@
-# luker 同网：tts-manager；Genie 用宿主机 venv + host 网络（避免 slim 里 pip 编译 jieba_fast）
+# Genie 跑在宿主机（systemd 或手动 venv :8000），仅起 tts-manager
 #
-# docker compose -f docker-compose.stack.yml up -d --build
+# docker compose -f docker-compose.stack.host-genie.yml up -d --build
 
 services:
-  genie-tts:
-    image: python:3.11-slim
-    container_name: genie-tts
-    restart: unless-stopped
-    network_mode: host
-    volumes:
-      - ${GENIE_ROOT:-/www/genie}:/www/genie
-      - ${TTS_ROOT:-/www/SillyTavern-GPT-SoVITS}/deploy/docker-genie-cmd.sh:/start-genie.sh:ro
-    environment:
-      - PYTHONUNBUFFERED=1
-      - GENIE_DATA_DIR=/www/genie/GenieData
-    command: ["/bin/bash", "/start-genie.sh"]
-
   tts-manager:
     build:
       context: .
