@@ -7,6 +7,6 @@
   "iframe_mode": false,
   "bubble_style": "default",
   "tts_engine": "genie",
-  "genie_host": "http://127.0.0.1:8000",
-  "sovits_host": "http://127.0.0.1:8000"
+  "genie_host": "http://127.0.0.1:8429",
+  "sovits_host": "http://127.0.0.1:8429"
 }

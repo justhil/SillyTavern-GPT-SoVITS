@@ -1,5 +1,20 @@
-// API 基础路径
-const API_BASE = '/api/admin';
+// API 基础路径（经网关 /tts-mw 时须带前缀）
+function middlewarePublicPrefix() {
+    const p = window.location.pathname || '';
+    const i = p.indexOf('/admin');
+    if (i > 0) return p.slice(0, i);
+    return '';
+}
+const API_BASE = `${middlewarePublicPrefix()}/api/admin`;
+const GENIE_API = `${middlewarePublicPrefix()}/api/genie`;
+
+function normalizeGenieHostInput(url) {
+    let u = (url || '').trim().replace(/\/$/, '');
+    if (u.includes(':8000') && !u.includes(':8429')) {
+        u = u.replace(':8000', ':8429');
+    }
+    return u;
+}
 
 // 当前状态
 let currentModels = [];
@@ -73,7 +88,11 @@ async function loadDashboard() {
                 statusEl.className = 'status-badge status-error';
                 document.getElementById('sovits-state').textContent = sovits.error || '无法连接';
             }
-            document.getElementById('sovits-url').textContent = sovits.url;
+            let genieUrl = sovits.url || '';
+            if (genieUrl.includes(':8000')) {
+                genieUrl = genieUrl.replace(':8000', ':8429');
+            }
+            document.getElementById('sovits-url').textContent = genieUrl;
         }
 
         // 检查版本更新
@@ -559,7 +578,10 @@ async function loadSettings() {
         // 基础配置
         document.getElementById('setting-base-dir').value = settings.base_dir || '';
         document.getElementById('setting-cache-dir').value = settings.cache_dir || '';
-        document.getElementById('setting-sovits-host').value = settings.genie_host || settings.sovits_host || 'http://127.0.0.1:8000';
+        document.getElementById('setting-sovits-host').value = normalizeGenieHostInput(
+            settings.genie_host || settings.sovits_host || 'http://127.0.0.1:8429'
+        );
+        document.getElementById('setting-middleware-api-key').value = settings.middleware_api_key || '';
         document.getElementById('setting-default-lang').value = settings.default_lang || 'Chinese';
 
         // ========== 分析引擎配置 ==========
@@ -654,8 +676,9 @@ async function saveSettings() {
     const settings = {
         base_dir: document.getElementById('setting-base-dir').value.trim(),
         cache_dir: document.getElementById('setting-cache-dir').value.trim(),
-        genie_host: document.getElementById('setting-sovits-host').value.trim(),
-        sovits_host: document.getElementById('setting-sovits-host').value.trim(),
+        genie_host: normalizeGenieHostInput(document.getElementById('setting-sovits-host').value),
+        sovits_host: normalizeGenieHostInput(document.getElementById('setting-sovits-host').value),
+        middleware_api_key: document.getElementById('setting-middleware-api-key').value,
         tts_engine: 'genie',
         default_lang: document.getElementById('setting-default-lang').value,
 
@@ -1251,7 +1274,7 @@ async function performUpdate() {
 async function testGenieConnection() {
     showNotification('正在测试 Genie API...', 'info');
     try {
-        const response = await fetch('/api/genie/test');
+        const response = await fetch(`${GENIE_API}/test`);
         const data = await response.json();
         if (data.success) {
             showNotification(`Genie 连接成功: ${data.url}`, 'success');
@@ -1266,7 +1289,7 @@ async function testGenieConnection() {
 
 async function loadGenieDashboardCard() {
     try {
-        const response = await fetch('/api/genie/status');
+        const response = await fetch(`${GENIE_API}/status`);
         if (!response.ok) return;
         const data = await response.json();
         const badge = document.getElementById('sovits-install-status');

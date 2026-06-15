@@ -57,7 +57,7 @@
                         <div class="card-body">
                             <div class="info-item">
                                 <span class="label">地址:</span>
-                                <span class="value" id="sovits-url">http://127.0.0.1:8000</span>
+                                <span class="value" id="sovits-url">http://127.0.0.1:8429</span>
                             </div>
                             <div class="info-item">
                                 <span class="label">状态:</span>
@@ -140,7 +140,7 @@
                         <div class="card-body">
                             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                                 本插件通过 <strong>Genie TTS HTTP API</strong> 合成语音，不再内置 Windows GPT-SoVITS 整合包。
-                                请在 VPS 或本机部署 <code>genie-tts</code>（默认端口 8000），并在「系统设置」填写 API 地址。
+                                请在 VPS 或本机部署 <code>genie-tts</code>（默认端口 <b>8429</b>），并在「系统设置」填写 API 地址。
                             </p>
                             <p style="font-size: 0.875rem; color: var(--text-secondary);">
                                 角色 ONNX：在 <code>genie_character_models.json</code> 配置
@@ -219,8 +219,14 @@
 
                         <div class="form-group">
                             <label>Genie TTS API 地址</label>
-                            <input type="text" id="setting-sovits-host" class="input" value="http://127.0.0.1:8000">
-                            <small>Genie HTTP API 根地址（如 http://你的VPS:8000）</small>
+                            <input type="text" id="setting-sovits-host" class="input" value="http://127.0.0.1:8429">
+                            <small>Genie HTTP API 根地址（如 http://127.0.0.1:8429 或容器内 http://172.17.0.1:8429）</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>中间件 API 密钥（公网暴露时必填）</label>
+                            <input type="password" id="setting-middleware-api-key" class="input" placeholder="留空表示不鉴权" autocomplete="new-password">
+                            <small>保存后，酒馆扩展「中间件连接」须填<b>相同密钥</b>。Docker 若设置了环境变量 <code>TTS_MW_API_KEY</code> 则优先生效。管理页 /admin 不受此限制。</small>
                         </div>
 
                         <div class="form-group">

@@ -5,7 +5,7 @@ set -euo pipefail
 REPO_URL="${TTS_REPO_URL:-https://github.com/justhil/SillyTavern-GPT-SoVITS.git}"
 INSTALL_DIR="${TTS_INSTALL_DIR:-/www/SillyTavern-GPT-SoVITS}"
 GENIE_REFS="${GENIE_REFS_DIR:-/www/genie/refs/墨白}"
-GENIE_HOST="${GENIE_HOST:-http://127.0.0.1:8000}"
+GENIE_HOST="${GENIE_HOST:-http://127.0.0.1:8429}"
 PORT="${TTS_MANAGER_PORT:-3000}"
 
 echo "[1/7] 目录 ${INSTALL_DIR}"
@@ -120,4 +120,4 @@ curl -sf "http://127.0.0.1:${PORT}/ping" && echo " ping OK" || echo " ping FAIL 
 curl -sf "${GENIE_HOST}/docs" >/dev/null && echo " Genie OK" || echo " Genie FAIL"
 
 echo "完成。中间件: http://$(hostname -I 2>/dev/null | awk '{print $1}'):${PORT}/admin"
-echo "酒馆扩展填: http://<本机公网IP>:${PORT}  （不是 Genie :8000）"
+echo "酒馆扩展填: http://<本机公网IP>:${PORT}  （Genie 默认 :8429，仅 Admin 配置）"

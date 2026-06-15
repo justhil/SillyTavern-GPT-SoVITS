@@ -14,7 +14,7 @@ FRONTEND_DIR = os.path.join(PLUGIN_ROOT, "frontend")
 DEFAULT_BASE_DIR = os.path.join(PLUGIN_ROOT, "MyCharacters")
 DEFAULT_CACHE_DIR = os.path.join(PLUGIN_ROOT, "Cache")
 MAX_CACHE_SIZE_MB = 500
-GENIE_HOST = "http://127.0.0.1:8000"
+GENIE_HOST = "http://127.0.0.1:8429"
 SOVITS_HOST = GENIE_HOST
 GENIE_MODELS_FILE = os.path.join(PLUGIN_ROOT, "genie_character_models.json")
 
@@ -87,9 +87,15 @@ def init_settings():
             settings[key] = val
             dirty = True
         elif (key == "base_dir" or key == "cache_dir") and not settings.get(key):
-            # 防止空字符串路径
             settings[key] = val
             dirty = True
+
+    for hk in ("genie_host", "sovits_host"):
+        if settings.get(hk):
+            fixed = normalize_genie_host_url(settings[hk])
+            if fixed != settings[hk]:
+                settings[hk] = fixed
+                dirty = True
 
     # 深度合并函数
     def deep_merge(defaults: dict, user_config: dict) -> bool:
@@ -247,9 +253,19 @@ def get_sovits_host():
     return get_genie_host()
 
 
+def normalize_genie_host_url(url: str) -> str:
+    if not url or not isinstance(url, str):
+        return GENIE_HOST
+    u = url.strip().rstrip("/")
+    if ":8000" in u and ":8429" not in u:
+        u = u.replace(":8000", ":8429", 1)
+    return u
+
+
 def get_genie_host():
     s = init_settings()
-    return s.get("genie_host") or s.get("sovits_host", GENIE_HOST)
+    raw = s.get("genie_host") or s.get("sovits_host", GENIE_HOST)
+    return normalize_genie_host_url(raw)
 
 
 def get_tts_engine():

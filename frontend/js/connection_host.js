@@ -1,6 +1,6 @@
 /**
  * 浏览器（含 Docker 内酒馆）→ 中间件 manager.py（:3000）。
- * Genie :8000 仅在中间件 Admin / system_settings 配置。
+ * Genie :8429 仅在中间件 Admin / system_settings 配置。
  */
 
 export const TTS_REMOTE_CONFIG_KEY = 'tts_plugin_remote_config';
@@ -54,7 +54,7 @@ export function getConnectionConfig() {
     try {
         const raw = localStorage.getItem(TTS_REMOTE_CONFIG_KEY);
         if (!raw) {
-            return { useRemote: false, ip: '', managerUrl: '', dockerMode: false };
+            return { useRemote: false, ip: '', managerUrl: '', dockerMode: false, apiKey: '' };
         }
         const p = JSON.parse(raw);
         return {
@@ -62,9 +62,10 @@ export function getConnectionConfig() {
             ip: p.ip || '',
             managerUrl: p.managerUrl || '',
             dockerMode: !!p.dockerMode,
+            apiKey: p.apiKey || '',
         };
     } catch {
-        return { useRemote: false, ip: '', managerUrl: '', dockerMode: false };
+        return { useRemote: false, ip: '', managerUrl: '', dockerMode: false, apiKey: '' };
     }
 }
 
@@ -104,12 +105,18 @@ export function sameOriginMiddlewareUrl() {
 
 export async function probeManagerBase(url, timeoutMs = 4000) {
     if (!url) return false;
+    const cfg = getConnectionConfig();
+    const headers = {};
+    if (cfg.apiKey && String(cfg.apiKey).trim()) {
+        headers['X-TTS-API-Key'] = String(cfg.apiKey).trim();
+    }
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
         const res = await fetch(`${url.replace(/\/+$/, '')}/ping`, {
             signal: ctrl.signal,
             cache: 'no-store',
+            headers,
         });
         clearTimeout(t);
         return res.ok;
@@ -223,7 +230,7 @@ export function getMixedContentHintHtml(managerBaseUrl) {
 export function getDockerSetupHintHtml() {
     return `
         <p style="margin:0 0 8px;line-height:1.45;">
-            中间件地址示例：<code>http://服务器IP:3000</code>（不是 Genie :8000）。
+            中间件地址示例：<code>http://服务器IP:46939/tts-mw</code>；Genie 默认 <code>:8429</code> 仅在 Admin 配置。
         </p>
         <p style="margin:0 0 8px;line-height:1.45;font-size:12px;color:#b2bec3;">
             Docker 酒馆：填<b>宿主机</b> IP。同机部署也建议填公网/内网 IP，不要填容器内 localhost。

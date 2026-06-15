@@ -1,4 +1,4 @@
-# Genie 跑在宿主机（systemd 或手动 venv :8000），仅起 tts-manager
+# Genie 跑在宿主机（systemd，默认 :8429），仅起 tts-manager
 #
 # docker compose -f docker-compose.stack.host-genie.yml up -d --build
 
@@ -15,8 +15,9 @@ services:
       - ${GENIE_ROOT:-/www/genie}:/www/genie:ro
     environment:
       - PYTHONUNBUFFERED=1
-      - GENIE_HOST=http://172.17.0.1:8000
+      - GENIE_HOST=http://172.17.0.1:8429
       - SETTINGS_FILE=/app/system_settings.json
+      - TTS_MW_API_KEY=${TTS_MW_API_KEY:-}
     entrypoint: ["/bin/sh", "/app/deploy/docker-entrypoint-tts.sh"]
     networks:
       - luker_net

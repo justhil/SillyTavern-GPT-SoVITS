@@ -5,7 +5,7 @@ export function getFloatingButtonHTML() {
 }
 
 export function getDashboardHTML(data) {
-    const { isEnabled, settings, isRemote, remoteIP, managerUrl, dockerMode, currentBase, currentCache, currentLang } = data;
+    const { isEnabled, settings, isRemote, remoteIP, managerUrl, dockerMode, apiKey, currentBase, currentCache, currentLang } = data;
 
     return `
         <div id="tts-dashboard-overlay" class="tts-overlay">
@@ -41,11 +41,13 @@ export function getDashboardHTML(data) {
                         </label>
                         <div id="tts-remote-input-area" style="display:${isRemote ? 'block' : 'none'}; margin-top:10px; padding-top:10px; border-top:1px dashed #444;">
                             <div class="tts-input-label">中间件地址（manager.py，端口 3000）</div>
-                            <div style="font-size:11px;color:#888;margin-bottom:6px;">例: http://192.168.1.5:3000 。Genie :8000 只在 Admin 配置。</div>
+                            <div style="font-size:11px;color:#888;margin-bottom:6px;">例: http://IP:46939/tts-mw 。Genie :8429 只在 Admin 配置。</div>
                             <div style="display:flex; gap:8px;flex-wrap:wrap;">
-                                <input type="text" id="tts-remote-ip" class="tts-modern-input" style="flex:1;min-width:180px;" value="${managerUrl || (remoteIP ? 'http://' + remoteIP + ':3000' : '')}" placeholder="http://192.168.x.x:3000">
+                                <input type="text" id="tts-remote-ip" class="tts-modern-input" style="flex:1;min-width:180px;" value="${managerUrl || (remoteIP ? 'http://' + remoteIP + ':3000' : '')}" placeholder="http://IP:46939/tts-mw">
                                 <button id="tts-save-remote" class="btn-primary">保存</button>
                             </div>
+                            <div class="tts-input-label" style="margin-top:10px;">中间件 API 密钥（与服务器 TTS_MW_API_KEY 一致，公网必填）</div>
+                            <input type="password" id="tts-mw-api-key" class="tts-modern-input" style="width:100%;margin-top:4px;" value="${apiKey || ''}" placeholder="未启用鉴权可留空" autocomplete="off">
                         </div>
                     </div>
 

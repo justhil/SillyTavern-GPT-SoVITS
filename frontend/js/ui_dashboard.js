@@ -72,6 +72,7 @@ export const TTS_UI = window.TTS_UI;
                 dockerMode: $('#tts-docker-mode').is(':checked'),
                 managerUrl: managerUrl || undefined,
                 ip: ip || undefined,
+                apiKey: ($('#tts-mw-api-key').val() || '').trim(),
             });
             alert("设置已保存,即将刷新");
             location.reload();

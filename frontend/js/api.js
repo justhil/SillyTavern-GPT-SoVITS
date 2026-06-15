@@ -1,4 +1,22 @@
 // static/js/api.js
+import { getConnectionConfig } from './connection_host.js';
+
+function middlewareApiKey() {
+    try {
+        const k = getConnectionConfig().apiKey;
+        return k && String(k).trim() ? String(k).trim() : '';
+    } catch {
+        return '';
+    }
+}
+
+function authHeaders(extra = {}) {
+    const h = { ...extra };
+    const key = middlewareApiKey();
+    if (key) h['X-TTS-API-Key'] = key;
+    return h;
+}
+
 export const TTS_API = {
     baseUrl: "",
 
@@ -11,11 +29,16 @@ export const TTS_API = {
         return `${this.baseUrl}${endpoint}`;
     },
 
+    async _fetch(endpoint, options = {}) {
+        const headers = authHeaders(options.headers || {});
+        return fetch(this._url(endpoint), { ...options, headers });
+    },
+
     async ping() {
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), 3000);
         try {
-            const res = await fetch(this._url('/ping'), { signal: controller.signal });
+            const res = await this._fetch('/ping', { signal: controller.signal });
             clearTimeout(t);
             return res.ok;
         } catch {
@@ -29,7 +52,7 @@ export const TTS_API = {
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         try {
-            const res = await fetch(this._url('/get_data'), {
+            const res = await this._fetch('/get_data', {
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -46,7 +69,7 @@ export const TTS_API = {
     },
 
     async updateSettings(payload) {
-        await fetch(this._url('/update_settings'), {
+        await this._fetch('/update_settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -56,7 +79,7 @@ export const TTS_API = {
     async checkCache(params) {
         const queryParams = { ...params, check_only: "true" };
         const query = new URLSearchParams(queryParams).toString();
-        const res = await fetch(this._url(`/tts_proxy?${query}`), {
+        const res = await this._fetch(`/tts_proxy?${query}`, {
             cache: 'no-store'
         });
 
@@ -85,7 +108,7 @@ export const TTS_API = {
     async generateAudio(params) {
         const queryParams = { ...params, streaming_mode: "false" };
         const query = new URLSearchParams(queryParams).toString();
-        const res = await fetch(this._url(`/tts_proxy?${query}`), {
+        const res = await this._fetch(`/tts_proxy?${query}`, {
             cache: 'no-store'
         });
 
@@ -112,7 +135,7 @@ export const TTS_API = {
     },
 
     async switchWeights(endpoint, path) {
-        const res = await fetch(this._url(`/${endpoint}?weights_path=${path}`));
+        const res = await this._fetch(`/${endpoint}?weights_path=${path}`);
 
         if (!res.ok) {
             // 尝试解析后端返回的详细错误信息
@@ -136,19 +159,19 @@ export const TTS_API = {
         const query = new URLSearchParams({ filename: filename }).toString();
 
         // 发送请求
-        const res = await fetch(this._url(`/delete_cache?${query}`));
+        const res = await this._fetch(`/delete_cache?${query}`);
         return await res.json();
     },
 
     // === 收藏夹管理 ===
     async getFavorites() {
-        const res = await fetch(this._url('/get_favorites'));
+        const res = await this._fetch('/get_favorites');
         return await res.json();
     },
 
     async addFavorite(payload) {
         // payload 格式: { text, audio_url, char_name, context: [...] }
-        const res = await fetch(this._url('/add_favorite'), {
+        const res = await this._fetch('/add_favorite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -157,7 +180,7 @@ export const TTS_API = {
     },
 
     async deleteFavorite(id) {
-        await fetch(this._url('/delete_favorite'), {
+        await this._fetch('/delete_favorite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: id })
@@ -165,7 +188,7 @@ export const TTS_API = {
     },
 
     async getMatchedFavorites(payload) {
-        const res = await fetch(this._url('/get_matched_favorites'), {
+        const res = await this._fetch('/get_matched_favorites', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -180,7 +203,7 @@ export const TTS_API = {
      * 绑定角色到模型文件夹
      */
     async bindCharacter(charName, modelFolder) {
-        const res = await fetch(this._url('/bind_character'), {
+        const res = await this._fetch('/bind_character', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ char_name: charName, model_folder: modelFolder })
@@ -192,7 +215,7 @@ export const TTS_API = {
      * 解绑角色
      */
     async unbindCharacter(charName) {
-        const res = await fetch(this._url('/unbind_character'), {
+        const res = await this._fetch('/unbind_character', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ char_name: charName })
@@ -204,7 +227,7 @@ export const TTS_API = {
      * 创建新的模型文件夹
      */
     async createModelFolder(folderName) {
-        const res = await fetch(this._url('/create_model_folder'), {
+        const res = await this._fetch('/create_model_folder', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folder_name: folderName })
@@ -220,7 +243,7 @@ export const TTS_API = {
      * 获取指定对话的所有说话人
      */
     async getSpeakers(chatBranch) {
-        const res = await fetch(this._url(`/api/speakers/${encodeURIComponent(chatBranch)}`));
+        const res = await this._fetch(`/api/speakers/${encodeURIComponent(chatBranch)}`);
         if (!res.ok) throw new Error("Get speakers failed");
         return await res.json();
     },
@@ -230,7 +253,7 @@ export const TTS_API = {
      */
     async updateSpeakers(payload) {
         // payload 格式: { chat_branch, speakers, mesid }
-        const res = await fetch(this._url('/api/speakers/update'), {
+        const res = await this._fetch('/api/speakers/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -244,7 +267,7 @@ export const TTS_API = {
      */
     async batchInitSpeakers(speakersData) {
         // speakersData 格式: [{ chat_branch, speakers, mesid }, ...]
-        const res = await fetch(this._url('/api/speakers/batch_init'), {
+        const res = await this._fetch('/api/speakers/batch_init', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ speakers_data: speakersData })
@@ -261,7 +284,7 @@ export const TTS_API = {
      * 获取角色最新的自动来电记录
      */
     async getLatestAutoCall(charName) {
-        const res = await fetch(this._url(`/api/phone_call/auto/latest/${encodeURIComponent(charName)}`));
+        const res = await this._fetch(`/api/phone_call/auto/latest/${encodeURIComponent(charName)}`);
         if (!res.ok) throw new Error("Get latest auto call failed");
         return await res.json();
     },
@@ -270,7 +293,7 @@ export const TTS_API = {
      * 获取角色的来电历史记录
      */
     async getAutoCallHistory(charName, limit = 50) {
-        const res = await fetch(this._url(`/api/phone_call/auto/history/${encodeURIComponent(charName)}?limit=${limit}`));
+        const res = await this._fetch(`/api/phone_call/auto/history/${encodeURIComponent(charName)}?limit=${limit}`);
         if (!res.ok) throw new Error("Get auto call history failed");
         return await res.json();
     },
@@ -279,7 +302,7 @@ export const TTS_API = {
      * 根据对话分支获取来电历史记录
      */
     async getAutoCallHistoryByChatBranch(chatBranch, limit = 50) {
-        const res = await fetch(this._url(`/api/phone_call/auto/history_by_branch/${encodeURIComponent(chatBranch)}?limit=${limit}`));
+        const res = await this._fetch(`/api/phone_call/auto/history_by_branch/${encodeURIComponent(chatBranch)}?limit=${limit}`);
         if (!res.ok) throw new Error("Get auto call history by branch failed");
         return await res.json();
     },
@@ -288,7 +311,7 @@ export const TTS_API = {
      * 根据指纹列表获取来电历史记录（支持跨分支匹配）
      */
     async getAutoCallHistoryByFingerprints(fingerprints, limit = 50) {
-        const res = await fetch(this._url('/api/phone_call/auto/history_by_fingerprints'), {
+        const res = await this._fetch('/api/phone_call/auto/history_by_fingerprints', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fingerprints, limit })

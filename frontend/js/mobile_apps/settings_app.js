@@ -51,7 +51,7 @@ export async function render(container, createNavbar) {
     }
 
     const settings = CTX.CACHE.settings || {};
-    let config = { useRemote: false, ip: '', managerUrl: '', dockerMode: false };
+    let config = { useRemote: false, ip: '', managerUrl: '', dockerMode: false, apiKey: '' };
     try {
         const saved = localStorage.getItem('tts_plugin_remote_config');
         if (saved) config = { ...config, ...JSON.parse(saved) };
@@ -64,6 +64,7 @@ export async function render(container, createNavbar) {
         remoteIP: config.ip,
         managerUrl: config.managerUrl || '',
         dockerMode: !!config.dockerMode,
+        apiKey: config.apiKey || '',
         currentBase: settings.base_dir || "",
         currentCache: settings.cache_dir || "",
         currentLang: settings.default_lang || "default"

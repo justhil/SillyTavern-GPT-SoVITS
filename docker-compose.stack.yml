@@ -29,7 +29,8 @@ services:
       - ${GENIE_ROOT:-/www/genie}:/www/genie:ro
     environment:
       - PYTHONUNBUFFERED=1
-      - GENIE_HOST=http://172.17.0.1:8000
+      - GENIE_HOST=http://172.17.0.1:8429
+      - TTS_MW_API_KEY=${TTS_MW_API_KEY:-}
       - SETTINGS_FILE=/app/system_settings.json
     entrypoint: ["/bin/sh", "/app/deploy/docker-entrypoint-tts.sh"]
     networks:

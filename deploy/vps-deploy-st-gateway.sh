@@ -12,8 +12,9 @@ if ! systemctl is-active genie-tts >/dev/null 2>&1; then
   systemctl start genie-tts 2>/dev/null || true
   sleep 2
 fi
-if ! curl -sf http://127.0.0.1:8000/docs >/dev/null 2>&1; then
-  echo "  WARN: Genie :8000 未就绪，请检查 systemctl status genie-tts"
+bash deploy/patch-genie-port-8429.sh 2>/dev/null || true
+if ! curl -sf http://127.0.0.1:8429/docs >/dev/null 2>&1; then
+  echo "  WARN: Genie :8429 未就绪，请检查 systemctl status genie-tts"
 fi
 docker compose -f docker-compose.stack.host-genie.yml up -d --build tts-manager
 

@@ -10,7 +10,7 @@ RUN="/www/genie/run_server.py"
 if [[ ! -x "$PY" ]]; then
   echo "[genie-tts] FATAL: 未找到宿主机 venv: $PY"
   echo "[genie-tts] 请在宿主机执行: systemctl start genie-tts"
-  echo "[genie-tts] 并在 tts-manager 使用 GENIE_HOST=http://172.17.0.1:8000"
+  echo "[genie-tts] 并在 tts-manager 使用 GENIE_HOST=http://172.17.0.1:8429"
   exit 1
 fi
 

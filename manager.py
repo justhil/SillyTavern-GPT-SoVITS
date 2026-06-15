@@ -12,6 +12,7 @@ from routers import data, tts, system, admin, phone_call, speakers, eavesdrop, c
 
 # 导入自定义日志中间件
 from middleware.logging_middleware import LoggingMiddleware
+from middleware.api_auth import MiddlewareApiKeyMiddleware
 
 # 初始化配置(确保 system_settings.json 和目录存在)
 init_settings()
@@ -19,9 +20,19 @@ init_settings()
 app = FastAPI()
 
 
+def _public_prefix(request: Request) -> str:
+    h = (request.headers.get("X-Forwarded-Prefix") or "").strip().rstrip("/")
+    if h:
+        return h
+    path = request.scope.get("path") or request.url.path or ""
+    if path.startswith("/tts-mw/") or path == "/tts-mw":
+        return "/tts-mw"
+    return ""
+
+
 @app.middleware("http")
 async def strip_tts_mw_prefix(request: Request, call_next):
-    """Cloudflare / st.justhil.uk/tts-mw/* 反代时去掉前缀"""
+    """反代 /tts-mw/* 时去掉前缀；响应里把 Location 补回公网路径"""
     path = request.scope.get("path") or request.url.path
     if path.startswith("/tts-mw/"):
         request.scope["path"] = path[8:]
@@ -29,10 +40,21 @@ async def strip_tts_mw_prefix(request: Request, call_next):
     elif path == "/tts-mw":
         request.scope["path"] = "/"
         request.scope["raw_path"] = b"/"
-    return await call_next(request)
+    response = await call_next(request)
+    prefix = _public_prefix(request)
+    if not prefix:
+        return response
+    loc = response.headers.get("location")
+    if not loc:
+        return response
+    if loc.startswith(prefix + "/") or loc == prefix:
+        return response
+    if loc.startswith("/"):
+        response.headers["location"] = prefix + loc
+    return response
 
 
-# 0. 添加自定义日志中间件(必须在 CORS 之前)
+app.add_middleware(MiddlewareApiKeyMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 # 1. CORS 配置
