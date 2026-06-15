@@ -256,8 +256,19 @@ async def batch_update_emotion(model_name: str, old_emotion: str, new_emotion: s
 
 @router.get("/settings")
 async def get_settings():
-    """获取系统配置"""
-    return init_settings()
+    """获取系统配置（敏感字段脱敏）"""
+    s = init_settings()
+    out = dict(s)
+    if out.get("middleware_admin_password") or out.get("admin_panel_password"):
+        out["admin_password_configured"] = True
+    else:
+        out["admin_password_configured"] = False
+    out.pop("middleware_admin_password", None)
+    out.pop("admin_panel_password", None)
+    if out.get("middleware_api_key"):
+        out["middleware_api_key_configured"] = True
+        out["middleware_api_key"] = ""
+    return out
 
 @router.post("/settings")
 async def update_settings(settings: dict):
@@ -278,6 +289,10 @@ async def update_settings(settings: dict):
                     result[key] = value
             return result
         
+        # 留空表示不修改（避免未回填密码时被清空）
+        for secret_key in ("middleware_admin_password", "middleware_api_key", "admin_panel_password"):
+            if secret_key in settings and not str(settings.get(secret_key) or "").strip():
+                settings.pop(secret_key, None)
         current = deep_merge(current, settings)
         save_json(SETTINGS_FILE, current)
         

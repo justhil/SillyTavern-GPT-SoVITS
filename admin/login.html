@@ -26,10 +26,12 @@
     <script>
         const prefix = window.__TTS_MW_PREFIX__ || '';
         const api = prefix + '/api/admin/auth';
-        fetch(api + '/status').then(r => r.json()).then(s => {
-            if (!s.password_required || s.authenticated) {
+        fetch(api + '/status', { credentials: 'include' }).then(r => r.json()).then(s => {
+            if (!s.password_required) {
                 location.href = prefix + '/admin/';
+                return;
             }
+            if (s.authenticated) location.href = prefix + '/admin/';
         });
         document.getElementById('login-btn').onclick = async () => {
             const pw = document.getElementById('login-password').value;

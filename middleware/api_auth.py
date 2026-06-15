@@ -38,10 +38,13 @@ class MiddlewareApiKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         path = request.url.path or ""
+        inner = path[8:] if path.startswith("/tts-mw/") else path
+        if inner == "/tts-mw":
+            inner = "/"
         if (
-            path.startswith("/admin")
-            or path.startswith("/static")
-            or path.startswith("/api/admin")
+            inner.startswith("/admin")
+            or inner.startswith("/static")
+            or inner.startswith("/api/admin")
         ):
             return await call_next(request)
 

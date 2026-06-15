@@ -73,6 +73,7 @@ class AdminPanelAuthMiddleware(BaseHTTPMiddleware):
         if not get_admin_panel_password():
             return await call_next(request)
 
+        # 鉴权在 strip 中间件之前执行，必须用完整 URL 路径
         path = request.url.path or ""
         inner = _inner_path(path)
         if not (inner.startswith("/admin") or inner.startswith("/api/admin")):

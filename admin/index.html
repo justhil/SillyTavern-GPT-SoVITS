@@ -659,6 +659,18 @@
     </div>
 
     <script src="js/admin.js"></script>
+    <script>
+        (function () {
+            var prefix = window.__TTS_MW_PREFIX__ || '';
+            fetch(prefix + '/api/admin/auth/status', { credentials: 'include' })
+                .then(function (r) { return r.json(); })
+                .then(function (s) {
+                    if (s.password_required && !s.authenticated) {
+                        location.href = prefix + '/admin/login.html';
+                    }
+                });
+        })();
+    </script>
 </body>
 
 </html>

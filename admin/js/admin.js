@@ -603,7 +603,10 @@ async function loadSettings() {
         );
         document.getElementById('setting-middleware-api-key').value = settings.middleware_api_key || '';
         const ap = document.getElementById('setting-admin-panel-password');
-        if (ap) ap.value = settings.middleware_admin_password || settings.admin_panel_password || '';
+        if (ap) {
+            ap.value = '';
+            ap.placeholder = settings.admin_password_configured ? '已设置，留空不修改' : '留空表示无需登录';
+        }
         document.getElementById('setting-default-lang').value = settings.default_lang || 'Chinese';
 
         // ========== 分析引擎配置 ==========
@@ -701,7 +704,9 @@ async function saveSettings() {
         genie_host: normalizeGenieHostInput(document.getElementById('setting-sovits-host').value),
         sovits_host: normalizeGenieHostInput(document.getElementById('setting-sovits-host').value),
         middleware_api_key: document.getElementById('setting-middleware-api-key').value,
-        middleware_admin_password: (document.getElementById('setting-admin-panel-password') || {}).value || '',
+        ...((pw => (pw ? { middleware_admin_password: pw } : {}))(
+            (document.getElementById('setting-admin-panel-password') || {}).value || ''
+        )),
         tts_engine: 'genie',
         default_lang: document.getElementById('setting-default-lang').value,
 
