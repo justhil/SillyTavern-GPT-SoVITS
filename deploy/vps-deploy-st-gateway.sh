@@ -2,7 +2,7 @@
 set -euo pipefail
 TTS_ROOT="${TTS_ROOT:-/www/SillyTavern-GPT-SoVITS}"
 cd "$TTS_ROOT"
-git pull origin main 2>/dev/null || true
+git pull https://github.com/justhil/SillyTavern-GPT-SoVITS.git main 2>/dev/null || git pull origin main 2>/dev/null || true
 
 export TTS_ROOT GENIE_ROOT="${GENIE_ROOT:-/www/genie}"
 

@@ -26,7 +26,7 @@ export TTS_ROOT GENIE_ROOT=/www/genie
 if docker image inspect st-tts-manager:local >/dev/null 2>&1; then
   docker compose -f docker-compose.stack.host-genie.yml up -d --no-build --force-recreate tts-manager
 else
-  TMPDIR=/var/tmp docker compose -f docker-compose.stack.host-genie.yml up -d --build
+  TMPDIR=/var/tmp DOCKER_TMPDIR=/var/tmp docker compose -f docker-compose.stack.host-genie.yml up -d --build
 fi
 docker compose -f docker-compose.gateway.yml up -d --force-recreate 2>/dev/null || true
 curl -sf http://127.0.0.1:46939/tts-mw/ping && echo " gateway ping OK" || true

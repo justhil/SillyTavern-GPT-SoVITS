@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import os, paramiko
+
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect("107.173.140.30", username="root", password=os.environ["GENIE_VPS_PASS"], timeout=30, allow_agent=False, look_for_keys=False)
+host = os.environ.get("GENIE_VPS_HOST", "107.173.140.30")
+c.connect(host, username="root", password=os.environ["GENIE_VPS_PASS"], timeout=30, allow_agent=False, look_for_keys=False)
 for cmd in [
     "docker ps -a --format '{{.Names}}' | grep -iE 'silly|luker|st'",
     "docker network inspect docker_default --format '{{range .Containers}}{{.Name}} {{end}}'",
