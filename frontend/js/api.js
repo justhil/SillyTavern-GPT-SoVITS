@@ -11,10 +11,22 @@ export const TTS_API = {
         return `${this.baseUrl}${endpoint}`;
     },
 
-    async getData() {
-        // 创建 AbortController 用于超时控制
+    async ping() {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 秒超时
+        const t = setTimeout(() => controller.abort(), 3000);
+        try {
+            const res = await fetch(this._url('/ping'), { signal: controller.signal });
+            clearTimeout(t);
+            return res.ok;
+        } catch {
+            clearTimeout(t);
+            return false;
+        }
+    },
+
+    async getData() {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         try {
             const res = await fetch(this._url('/get_data'), {

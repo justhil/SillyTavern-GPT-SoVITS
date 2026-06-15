@@ -57,14 +57,19 @@ export const TTS_UI = window.TTS_UI;
         $('#tts-dashboard-overlay').remove();
 
         const settings = scope.CTX.CACHE.settings || {};
-        const savedConfig = localStorage.getItem('tts_plugin_remote_config');
-        const config = savedConfig ? JSON.parse(savedConfig) : { useRemote: false, ip: "" };
+        let config = { useRemote: false, ip: '', managerUrl: '', dockerMode: false };
+        try {
+            const savedConfig = localStorage.getItem('tts_plugin_remote_config');
+            if (savedConfig) config = { ...config, ...JSON.parse(savedConfig) };
+        } catch (_) {}
 
         const templateData = {
             isEnabled: settings.enabled !== false,
             settings: settings,
             isRemote: config.useRemote,
             remoteIP: config.ip,
+            managerUrl: config.managerUrl || '',
+            dockerMode: !!config.dockerMode,
             currentBase: settings.base_dir || "",
             currentCache: settings.cache_dir || "",
             currentLang: settings.default_lang || "default"

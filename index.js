@@ -22,11 +22,18 @@ import { LLM_Client } from './frontend/js/llm_client.js';
 import { TTS_Mobile } from './frontend/js/mobile_ui.js';
 import { WebSocketManager } from './frontend/js/websocket_manager.js';
 import { ChatEventListener } from './frontend/js/chat_event_listener.js';
-import { resolveApiHost, normalizeRemoteHost, managerApiBase } from './frontend/js/connection_host.js';
+import {
+    resolveManagerBaseUrl,
+    normalizeRemoteHost,
+    normalizeManagerBaseUrl,
+    setConnectionConfig,
+    needsDockerMiddlewareSetup,
+    getDockerSetupHintHtml,
+} from './frontend/js/connection_host.js';
 
-// ================= 1. 配置区域（中间件 :3000，不是 Genie :8000）=================
-const apiHost = resolveApiHost();
-const MANAGER_API = managerApiBase(apiHost);
+// ================= 1. 中间件根地址（:3000，Docker 内需填宿主机 IP）=================
+const MANAGER_API = resolveManagerBaseUrl();
+console.log('🔵 [TTS] 中间件地址:', MANAGER_API);
 
 // ================= 暴露模块到 window 对象 (向后兼容) =================
 // 由于部分模块内部仍使用 window.TTS_* 引用,需要暴露到全局
@@ -48,8 +55,37 @@ if (!window.TTS_UI.CTX) {
 }
 
 // ================= 2. 主逻辑函数 =================
+function showDockerSetupBanner() {
+    if ($('#tts-docker-setup-banner').length) return;
+    const html = `
+        <div id="tts-docker-setup-banner" style="
+            position:fixed;bottom:12px;left:12px;right:12px;max-width:420px;margin:0 auto;
+            z-index:999998;background:#2d3436;color:#fff;padding:14px;border-radius:8px;
+            border:1px solid #fdcb6e;box-shadow:0 4px 20px rgba(0,0,0,.4);font-size:13px;
+        ">
+            <div style="font-weight:bold;color:#fdcb6e;margin-bottom:8px;">🐳 Docker 酒馆：请配置中间件地址</div>
+            ${getDockerSetupHintHtml()}
+            <input type="text" id="tts-docker-manager-url" placeholder="http://192.168.x.x:3000"
+                style="width:100%;box-sizing:border-box;padding:6px;margin:8px 0;border-radius:4px;border:none;">
+            <button id="tts-docker-save" style="width:100%;padding:8px;background:#0984e3;color:#fff;border:none;border-radius:4px;cursor:pointer;">保存并重连</button>
+            <button id="tts-docker-dismiss" style="margin-top:8px;width:100%;background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;">稍后配置</button>
+        </div>`;
+    $('body').append(html);
+    $('#tts-docker-save').on('click', () => {
+        const url = normalizeManagerBaseUrl($('#tts-docker-manager-url').val());
+        if (!url) return alert('请填写 http://宿主机IP:3000');
+        setConnectionConfig({ useRemote: true, dockerMode: true, managerUrl: url });
+        location.reload();
+    });
+    $('#tts-docker-dismiss').on('click', () => $('#tts-docker-setup-banner').remove());
+}
+
 function initPlugin() {
     console.log("✅ [TTS] 开始初始化插件核心...");
+
+    if (needsDockerMiddlewareSetup()) {
+        showDockerSetupBanner();
+    }
 
     const cachedStyle = localStorage.getItem('tts_bubble_style');
     const styleToApply = cachedStyle || 'default';
@@ -329,9 +365,9 @@ function showEmergencyConfig(currentApi) {
             max-width: 250px;
         ">
             <div style="font-weight:bold; color:#ff7675; margin-bottom:8px;">⚠️ 无法连接插件后端</div>
-            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>请确认本机已运行 <code style="color:#dfe6e9">python manager.py</code>（端口 <b>3000</b>）。<br><span style="color:#fdcb6e">不要填 Genie 的 :8000</span>，只填运行中间件的电脑 IP：</div>
+            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>${getDockerSetupHintHtml()}</div>
 
-            <input type="text" id="tts-emergency-ip" placeholder="例如: 192.168.1.5 或 107.173.140.30"
+            <input type="text" id="tts-emergency-ip" placeholder="http://192.168.x.x:3000 或仅 IP"
                 style="width:100%; box-sizing:border-box; padding:5px; margin-bottom:8px; border-radius:4px; border:none;">
 
             <button id="tts-emergency-save" style="
@@ -363,12 +399,15 @@ function showEmergencyConfig(currentApi) {
         const ip = $('#tts-emergency-ip').val().trim();
         if (!ip) return alert("请输入 IP");
 
+        const asUrl = normalizeManagerBaseUrl(ip);
         const host = normalizeRemoteHost(ip);
-        if (!host) return alert('IP 无效');
-        localStorage.setItem('tts_plugin_remote_config', JSON.stringify({
+        if (!asUrl && !host) return alert('地址无效');
+        setConnectionConfig({
             useRemote: true,
-            ip: host
-        }));
+            dockerMode: true,
+            managerUrl: asUrl || undefined,
+            ip: host || undefined,
+        });
 
         alert(`设置已保存: ${ip}\n页面即将刷新...`);
         location.reload();

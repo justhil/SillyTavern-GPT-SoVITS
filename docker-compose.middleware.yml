@@ -1,0 +1,17 @@
+# 中间件单独容器（与 Docker 酒馆同机时）
+# 用法: docker compose -f docker-compose.middleware.yml up -d
+# 酒馆扩展填: http://<宿主机局域网IP>:3000
+
+services:
+  tts-manager:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: >
+      bash -c "pip install -q -r requirements.txt && python manager.py"
+    ports:
+      - "3000:3000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

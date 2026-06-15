@@ -1,5 +1,5 @@
 ﻿// 文件: ui_dashboard.js
-import { normalizeRemoteHost } from './connection_host.js';
+import { normalizeRemoteHost, normalizeManagerBaseUrl, setConnectionConfig } from './connection_host.js';
 
 if (!window.TTS_UI) {
     window.TTS_UI = {};
@@ -58,10 +58,21 @@ export const TTS_UI = window.TTS_UI;
             }
         });
 
+        $('#tts-docker-mode').change(function () {
+            setConnectionConfig({ dockerMode: $(this).is(':checked'), useRemote: true });
+        });
+
         $('#tts-save-remote').click(function () {
-            const ip = normalizeRemoteHost($('#tts-remote-ip').val());
-            if (!ip) { alert("请输入 IP（不要带 http:// 或 :8000）"); return; }
-            localStorage.setItem('tts_plugin_remote_config', JSON.stringify({ useRemote: true, ip: ip }));
+            const raw = $('#tts-remote-ip').val();
+            const managerUrl = normalizeManagerBaseUrl(raw);
+            const ip = normalizeRemoteHost(raw);
+            if (!managerUrl && !ip) { alert("请填写 http://宿主机IP:3000"); return; }
+            setConnectionConfig({
+                useRemote: true,
+                dockerMode: $('#tts-docker-mode').is(':checked'),
+                managerUrl: managerUrl || undefined,
+                ip: ip || undefined,
+            });
             alert("设置已保存,即将刷新");
             location.reload();
         });

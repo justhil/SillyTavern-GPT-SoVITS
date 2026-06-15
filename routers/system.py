@@ -6,6 +6,13 @@ from schemas import SettingsRequest
 
 router = APIRouter()
 
+
+@router.get("/ping")
+def ping():
+    """健康检查（Docker/酒馆扩展探测中间件是否可达）"""
+    return {"ok": True, "service": "sillytavern-gpt-sovits-manager", "port": 3000}
+
+
 @router.post("/clear_cache")
 def clear_cache():
     _, cache_dir = get_current_dirs()

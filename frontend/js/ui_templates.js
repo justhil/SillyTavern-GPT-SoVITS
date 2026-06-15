@@ -5,7 +5,7 @@ export function getFloatingButtonHTML() {
 }
 
 export function getDashboardHTML(data) {
-    const { isEnabled, settings, isRemote, remoteIP, currentBase, currentCache, currentLang } = data;
+    const { isEnabled, settings, isRemote, remoteIP, managerUrl, dockerMode, currentBase, currentCache, currentLang } = data;
 
     return `
         <div id="tts-dashboard-overlay" class="tts-overlay">
@@ -30,16 +30,20 @@ export function getDashboardHTML(data) {
                     </div>
 
                     <div class="tts-card">
-                        <div class="tts-card-title">📡 连接模式</div>
+                        <div class="tts-card-title">📡 中间件连接</div>
                         <label class="tts-switch-row">
-                            <span class="tts-switch-label">远程模式 (局域网部署用)</span>
+                            <span class="tts-switch-label">Docker / 远程中间件（必填宿主机地址）</span>
                             <input type="checkbox" id="tts-remote-switch" class="tts-toggle" ${isRemote ? 'checked' : ''}>
                         </label>
+                        <label class="tts-switch-row" style="margin-top:6px;">
+                            <span class="tts-switch-label">我使用 Docker 跑酒馆</span>
+                            <input type="checkbox" id="tts-docker-mode" class="tts-toggle" ${dockerMode ? 'checked' : ''}>
+                        </label>
                         <div id="tts-remote-input-area" style="display:${isRemote ? 'block' : 'none'}; margin-top:10px; padding-top:10px; border-top:1px dashed #444;">
-                            <div class="tts-input-label">中间件所在电脑 IP（端口固定 3000）</div>
-                            <div style="font-size:11px;color:#888;margin-bottom:6px;">Genie API 的 :8000 在 Admin 里配，不要写在这里</div>
-                            <div style="display:flex; gap:8px;">
-                                <input type="text" id="tts-remote-ip" class="tts-modern-input" value="${remoteIP}" placeholder="192.168.x.x">
+                            <div class="tts-input-label">中间件地址（manager.py，端口 3000）</div>
+                            <div style="font-size:11px;color:#888;margin-bottom:6px;">例: http://192.168.1.5:3000 。Genie :8000 只在 Admin 配置。</div>
+                            <div style="display:flex; gap:8px;flex-wrap:wrap;">
+                                <input type="text" id="tts-remote-ip" class="tts-modern-input" style="flex:1;min-width:180px;" value="${managerUrl || (remoteIP ? 'http://' + remoteIP + ':3000' : '')}" placeholder="http://192.168.x.x:3000">
                                 <button id="tts-save-remote" class="btn-primary">保存</button>
                             </div>
                         </div>
