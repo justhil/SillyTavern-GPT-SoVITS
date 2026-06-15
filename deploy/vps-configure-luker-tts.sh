@@ -30,6 +30,11 @@ block = f"""  - hostname: st.justhil.uk
 """
 if "/tts-mw" not in text:
     text = text.replace("ingress:\n", "ingress:\n" + block, 1)
+tts_host = f"""  - hostname: tts.justhil.uk
+    service: http://{gw}:3000
+"""
+if "tts.justhil.uk" not in text:
+    text = text.replace("ingress:\n", "ingress:\n" + tts_host, 1)
 p.write_text(text, encoding="utf-8")
 print("patched", p)
 PY
@@ -63,7 +68,8 @@ curl -sf "https://st.justhil.uk/tts-mw/ping" && echo " st.justhil.uk/tts-mw OK" 
 
 echo ""
 echo "=== 酒馆扩展请填（同源，不要 :3000）==="
-echo "  https://st.justhil.uk/tts-mw"
+echo "  https://tts.justhil.uk   （推荐，需在 Cloudflare 隧道/DNS 添加该主机名）"
+echo "  https://st.justhil.uk/tts-mw （备选）"
 echo "  或本机调试: http://127.0.0.1:46938 对应扩展填 http://107.173.140.30:46938/tts-mw 需另配反代（见下）"
 echo ""
 echo "若只用 IP:46938 访问酒馆，在 1Panel OpenResty 为该端口加 location /tts-mw/ 或改用域名 st.justhil.uk"

@@ -17,7 +17,15 @@ compose：`/www/st/luker/Luker/docker-compose.yml`
 
 不要用 `http://IP:3000`（和酒馆不同源）。
 
-**推荐（已配置 Cloudflare 路径）：**
+**推荐：**
+
+```text
+https://tts.justhil.uk
+```
+
+在 Cloudflare 为隧道增加公网主机名 `tts.justhil.uk` → `http://172.17.0.1:3000`（脚本已写 ingress）。
+
+备选（同域名路径，需中间件 strip `/tts-mw` 前缀）：
 
 ```text
 https://st.justhil.uk/tts-mw

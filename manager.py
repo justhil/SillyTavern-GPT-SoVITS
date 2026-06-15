@@ -18,6 +18,20 @@ init_settings()
 
 app = FastAPI()
 
+
+@app.middleware("http")
+async def strip_tts_mw_prefix(request: Request, call_next):
+    """Cloudflare / st.justhil.uk/tts-mw/* 反代时去掉前缀"""
+    path = request.scope.get("path") or request.url.path
+    if path.startswith("/tts-mw/"):
+        request.scope["path"] = path[8:]
+        request.scope["raw_path"] = request.scope["path"].encode()
+    elif path == "/tts-mw":
+        request.scope["path"] = "/"
+        request.scope["raw_path"] = b"/"
+    return await call_next(request)
+
+
 # 0. 添加自定义日志中间件(必须在 CORS 之前)
 app.add_middleware(LoggingMiddleware)
 
