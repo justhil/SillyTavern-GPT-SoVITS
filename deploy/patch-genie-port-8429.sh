@@ -5,9 +5,19 @@ GENIE_ROOT="${GENIE_ROOT:-/www/genie}"
 PORT=8429
 
 if [[ -f "${GENIE_ROOT}/run_server.py" ]]; then
-  if grep -q 'port=8000' "${GENIE_ROOT}/run_server.py" 2>/dev/null; then
-    sed -i 's/port=8000/port=8429/g; s/port: 8000/port: 8429/g; s/:8000/:8429/g' "${GENIE_ROOT}/run_server.py" || true
-    echo "[ok] patched ${GENIE_ROOT}/run_server.py"
+  sed -i 's/port=8000/port=8429/g; s/port: 8000/port: 8429/g; s/port=8429/port=8429/g' "${GENIE_ROOT}/run_server.py" 2>/dev/null || true
+  sed -i 's/"port": 8000/"port": 8429/g; s/"port":8000/"port":8429/g' "${GENIE_ROOT}/run_server.py" 2>/dev/null || true
+  if grep -qE '8000' "${GENIE_ROOT}/run_server.py" 2>/dev/null; then
+    python3 -c "
+import re, pathlib
+p=pathlib.Path('${GENIE_ROOT}/run_server.py')
+t=p.read_text()
+t=re.sub(r'port\\s*=\\s*8000', 'port=8429', t)
+t=re.sub(r'port\\s*=\\s*\"8000\"', 'port=\"8429\"', t)
+p.write_text(t)
+" && echo "[ok] python patched run_server.py"
+  else
+    echo "[ok] run_server.py uses 8429"
   fi
 fi
 
