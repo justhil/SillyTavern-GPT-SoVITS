@@ -1,0 +1,69 @@
+# Luker 同网 Docker：tts-manager + genie-tts
+# 宿主机目录映射，容器间 http://tts-manager:3000 / http://genie-tts:8000
+#
+# 用法（在仓库 deploy 目录或指定 -f）:
+#   docker compose -f docker-compose.st-tts-stack.yml up -d --build
+#
+# Cloudflare 主机名 tts.justhil.uk → http://tts-manager:3000
+# 酒馆扩展 → https://tts.justhil.uk
+
+services:
+  genie-tts:
+    image: python:3.11-slim
+    container_name: genie-tts
+    restart: unless-stopped
+    working_dir: /www/genie
+    volumes:
+      - ${GENIE_ROOT:-/www/genie}:/www/genie
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GENIE_DATA_DIR=/www/genie/GenieData
+    command: >
+      bash -c "
+        if [ -x /www/genie/venv/bin/python ] && [ -f /www/genie/run_server.py ]; then
+          exec /www/genie/venv/bin/python /www/genie/run_server.py;
+        else
+          pip install -q genie-tts && python -c \"
+import os; os.environ.setdefault('GENIE_DATA_DIR','/www/genie/GenieData');
+import genie_tts as g; g.start_server(host='0.0.0.0', port=8000, workers=1)\";
+        fi
+      "
+    networks:
+      - st_tts_net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  tts-manager:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.tts-manager
+    image: st-tts-manager:local
+    container_name: tts-manager
+    restart: unless-stopped
+    depends_on:
+      genie-tts:
+        condition: service_started
+    volumes:
+      - ${TTS_ROOT:-/www/SillyTavern-GPT-SoVITS}:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GENIE_HOST=http://genie-tts:8000
+      - SETTINGS_FILE=/app/system_settings.json
+    entrypoint: ["/bin/sh", "/app/deploy/docker-entrypoint-tts.sh"]
+    networks:
+      - st_tts_net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/ping', timeout=5)\""]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+networks:
+  st_tts_net:
+    name: docker_default
+    external: true

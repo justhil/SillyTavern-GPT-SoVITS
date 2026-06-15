@@ -34,9 +34,11 @@
 | Subdomain | `tts` |
 | Domain | `justhil.uk` |
 | Type | HTTP |
-| URL | `172.17.0.1:3000` |
+| URL | **`http://tts-manager:3000`**（Docker 栈，与 luker 同网） |
 
-说明：cloudflared 在 Docker 里，访问宿主机上的 `manager.py` 用 **172.17.0.1**（Linux 默认 docker0 网关）。
+若仍用宿主机 systemd 中间件，才填 `172.17.0.1:3000`。
+
+部署 Docker 栈：`bash deploy/vps-docker-tts-stack.sh`，见 **`deploy/DOCKER-STACK.md`**。
 
 保存后等 1～2 分钟，浏览器测：
 
