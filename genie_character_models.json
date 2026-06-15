@@ -1,1 +1,7 @@
-{}
+{
+  "墨白": {
+    "genie_character": "mobai",
+    "onnx_model_dir": "/www/genie/characters/墨白",
+    "language": "zh"
+  }
+}
