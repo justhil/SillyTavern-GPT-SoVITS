@@ -1,12 +1,21 @@
 // API 基础路径（经网关 /tts-mw 时须带前缀）
 function middlewarePublicPrefix() {
+    if (typeof window.__TTS_MW_PREFIX__ === 'string') {
+        return window.__TTS_MW_PREFIX__;
+    }
     const p = window.location.pathname || '';
     const i = p.indexOf('/admin');
     if (i > 0) return p.slice(0, i);
     return '';
 }
-const API_BASE = `${middlewarePublicPrefix()}/api/admin`;
-const GENIE_API = `${middlewarePublicPrefix()}/api/genie`;
+
+function apiRoot() {
+    const prefix = middlewarePublicPrefix();
+    return prefix ? `${prefix}/api` : '/api';
+}
+
+const API_BASE = `${apiRoot()}/admin`;
+const GENIE_API = `${apiRoot()}/genie`;
 
 function normalizeGenieHostInput(url) {
     let u = (url || '').trim().replace(/\/$/, '');

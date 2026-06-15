@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SillyTavern GPT-SoVITS 管理面板</title>
+    <script>
+        (function () {
+            var p = location.pathname || '';
+            var i = p.indexOf('/admin');
+            window.__TTS_MW_PREFIX__ = i > 0 ? p.slice(0, i) : '';
+        })();
+    </script>
     <link rel="stylesheet" href="css/admin.css">
 </head>
 
