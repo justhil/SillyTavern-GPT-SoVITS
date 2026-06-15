@@ -1,0 +1,31 @@
+# 中间件独立栈：仅 tts-manager，不依赖 luker / st-gateway
+# 与 cloudflared 同网 docker_default，Tunnel 可直连 tts-manager:3000
+#
+#   export TTS_ROOT=/www/SillyTavern-GPT-SoVITS
+#   docker compose -f docker-compose.middleware-standalone.yml up -d --build
+
+services:
+  tts-manager:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.tts-manager
+    image: st-tts-manager:local
+    container_name: tts-manager
+    restart: unless-stopped
+    volumes:
+      - ${TTS_ROOT:-.}:/app
+      - ${GENIE_ROOT:-/www/genie}:/www/genie:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GENIE_HOST=http://172.17.0.1:8429
+      - SETTINGS_FILE=/app/system_settings.json
+      - TTS_MW_API_KEY=${TTS_MW_API_KEY:-}
+      - ADMIN_PANEL_PASSWORD=${ADMIN_PANEL_PASSWORD:-}
+    entrypoint: ["/bin/sh", "/app/deploy/docker-entrypoint-tts.sh"]
+    networks:
+      - tunnel_net
+
+networks:
+  tunnel_net:
+    name: docker_default
+    external: true
