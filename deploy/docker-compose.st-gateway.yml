@@ -1,0 +1,19 @@
+# 同源反代：http://<IP>:46938/ 酒馆，http://<IP>:46938/tts-mw/ 中间件
+# 需先停 luker 对 46938 的直接映射（脚本会处理）
+
+services:
+  st-gateway:
+    image: nginx:alpine
+    container_name: st-gateway
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:46938:80"
+    volumes:
+      - ./nginx-st-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - luker_net
+
+networks:
+  luker_net:
+    name: docker_default
+    external: true
