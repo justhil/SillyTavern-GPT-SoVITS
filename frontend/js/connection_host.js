@@ -96,6 +96,46 @@ export function managerApiBase(host) {
     return `http://${host}:${DEFAULT_MANAGER_PORT}`;
 }
 
+/** 与酒馆同 host:port，经 nginx /tts-mw/ 反代（无跨域） */
+export function sameOriginMiddlewareUrl() {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/tts-mw`;
+}
+
+export async function probeManagerBase(url, timeoutMs = 4000) {
+    if (!url) return false;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+        const res = await fetch(`${url.replace(/\/+$/, '')}/ping`, {
+            signal: ctrl.signal,
+            cache: 'no-store',
+        });
+        clearTimeout(t);
+        return res.ok;
+    } catch {
+        clearTimeout(t);
+        return false;
+    }
+}
+
+/** 自动：已保存 URL → 同源 /tts-mw → 远程 :3000 */
+export async function resolveManagerBaseUrlAsync() {
+    const cfg = getConnectionConfig();
+    if (cfg.managerUrl) {
+        const u = normalizeManagerBaseUrl(cfg.managerUrl);
+        if (u && (await probeManagerBase(u))) return u;
+    }
+    if (cfg.useRemote && cfg.ip) {
+        const host = normalizeRemoteHost(cfg.ip);
+        const u = managerApiBase(host);
+        if (await probeManagerBase(u)) return u;
+    }
+    const same = sameOriginMiddlewareUrl();
+    if (await probeManagerBase(same)) return same;
+    return resolveManagerBaseUrl();
+}
+
 /** @deprecated 仅取 host，请优先 resolveManagerBaseUrl */
 export function resolveApiHost() {
     const base = resolveManagerBaseUrl();

@@ -1,0 +1,5 @@
+# 若 SillyTavern 用 docker-compose，在酒馆容器前加一层 nginx 反代 /tts-mw
+# 或把下面 location 抄进你现有的 reverse proxy
+#
+# 扩展中间件地址填: http://你的IP:酒馆端口/tts-mw
+# 例: http://107.173.140.30:8000/tts-mw

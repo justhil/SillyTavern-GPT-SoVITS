@@ -24,6 +24,8 @@ import { WebSocketManager } from './frontend/js/websocket_manager.js';
 import { ChatEventListener } from './frontend/js/chat_event_listener.js';
 import {
     resolveManagerBaseUrl,
+    resolveManagerBaseUrlAsync,
+    sameOriginMiddlewareUrl,
     normalizeRemoteHost,
     normalizeManagerBaseUrl,
     setConnectionConfig,
@@ -33,10 +35,6 @@ import {
     isMixedContentRisk,
     TTS_REMOTE_CONFIG_KEY,
 } from './frontend/js/connection_host.js';
-
-// ================= 1. 中间件根地址（:3000，Docker 内需填宿主机 IP）=================
-const MANAGER_API = resolveManagerBaseUrl();
-console.log('🔵 [TTS] 中间件地址:', MANAGER_API);
 
 // ================= 暴露模块到 window 对象 (向后兼容) =================
 // 由于部分模块内部仍使用 window.TTS_* 引用,需要暴露到全局
@@ -83,8 +81,9 @@ function showDockerSetupBanner() {
     $('#tts-docker-dismiss').on('click', () => $('#tts-docker-setup-banner').remove());
 }
 
-function initPlugin() {
-    console.log("✅ [TTS] 开始初始化插件核心...");
+function initPlugin(MANAGER_API) {
+    console.log("✅ [TTS] 开始初始化插件核心...", MANAGER_API);
+    window.__TTS_MANAGER_API = MANAGER_API;
 
     if (needsDockerMiddlewareSetup()) {
         showDockerSetupBanner();
@@ -227,7 +226,7 @@ function initPlugin() {
             $('#tts-manager-btn').css({ 'border-color': '#ff5252', 'color': '#ff5252' }).text('⚠️ TTS断开');
 
             console.log("🔴 [Debug] 调用 showEmergencyConfig, MANAGER_API =", MANAGER_API);
-            showEmergencyConfig(MANAGER_API);
+            showEmergencyConfig(window.__TTS_MANAGER_API || MANAGER_API);
             console.log("🔴 [Debug] showEmergencyConfig 调用完成");
         }
     }
@@ -372,7 +371,7 @@ function showEmergencyConfig(currentApi) {
             <div style="font-weight:bold; color:#ff7675; margin-bottom:8px;">⚠️ 无法连接插件后端</div>
             <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>${getDockerSetupHintHtml()}${mixedHint}</div>
 
-            <input type="text" id="tts-emergency-ip" placeholder="http://IP:3000 或 https://域名/tts-manager"
+            <input type="text" id="tts-emergency-ip" placeholder="推荐: 酒馆同源 /tts-mw"
                 style="width:100%; box-sizing:border-box; padding:5px; margin-bottom:8px; border-radius:4px; border:none;">
 
             <button id="tts-emergency-save" style="
@@ -383,6 +382,10 @@ function showEmergencyConfig(currentApi) {
                 width:100%; margin-top:6px; padding:6px; background:#636e72; color:white;
                 border:none; border-radius:4px; cursor:pointer;
             ">清除配置，自动检测</button>
+            <button id="tts-emergency-same-origin" style="
+                width:100%; margin-top:6px; padding:6px; background:#00b894; color:white;
+                border:none; border-radius:4px; cursor:pointer;
+            ">使用酒馆同源 /tts-mw（推荐）</button>
 
             <div style="margin-top:8px; text-align:center;">
                 <button id="tts-emergency-close" style="background:none; border:none; color:#aaa; font-size:12px; text-decoration:underline; cursor:pointer;">关闭</button>
@@ -403,6 +406,13 @@ function showEmergencyConfig(currentApi) {
     $('#tts-emergency-clear').on('click', function () {
         localStorage.removeItem(TTS_REMOTE_CONFIG_KEY);
         alert('已清除，页面将刷新');
+        location.reload();
+    });
+
+    $('#tts-emergency-same-origin').on('click', function () {
+        const u = sameOriginMiddlewareUrl();
+        setConnectionConfig({ useRemote: true, dockerMode: true, managerUrl: u });
+        alert('已设为同源: ' + u + '\n请先在服务器配置 nginx /tts-mw/ 反代');
         location.reload();
     });
 
@@ -429,14 +439,16 @@ function showEmergencyConfig(currentApi) {
     });
 }
 
-// ================= 3. 启动插件 =================
+// ================= 3. 启动插件（自动探测 :3000 或同源 /tts-mw）=================
 console.log("🚀 [TTS] 正在初始化插件...");
-initPlugin();
-
-// 初始化手机端 UI
-if (TTS_Mobile && TTS_Mobile.init) {
-    TTS_Mobile.init();
-}
+(async () => {
+    const MANAGER_API = await resolveManagerBaseUrlAsync();
+    console.log('🔵 [TTS] 中间件地址:', MANAGER_API);
+    initPlugin(MANAGER_API);
+    if (TTS_Mobile && TTS_Mobile.init) {
+        TTS_Mobile.init();
+    }
+})();
 
 // 初始化聊天事件监听器 (延迟 2 秒,确保 SillyTavern 完全加载)
 setTimeout(() => {

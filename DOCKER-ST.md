@@ -56,3 +56,16 @@ python manager.py
 ## 检测
 
 `curl http://宿主机IP:3000/ping` 应返回 `{"ok":true,...}`
+
+## 同机 HTTP 酒馆仍连不上 :3000（跨端口）
+
+浏览器从 `http://IP:8000` 请求 `http://IP:3000` 可能失败。请用 **同源反代**：
+
+```bash
+cd /www/SillyTavern-GPT-SoVITS
+SILLYTAVERN_PORT=8000 bash deploy/vps-nginx-st-same-origin.sh
+```
+
+扩展填 **`http://107.173.140.30:8000/tts-mw`**（端口改成你酒馆端口），或点救援框 **「使用酒馆同源 /tts-mw」**。
+
+验证：`curl http://127.0.0.1:8000/tts-mw/ping`
