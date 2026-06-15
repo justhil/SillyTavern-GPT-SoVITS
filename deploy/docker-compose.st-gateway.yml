@@ -1,5 +1,5 @@
-# 同源反代：http://<IP>:46938/ 酒馆，http://<IP>:46938/tts-mw/ 中间件
-# 需先停 luker 对 46938 的直接映射（脚本会处理）
+# 网关：宿主机 46938 → luker + /tts-mw → tts-manager
+# 需先取消 luker 对 46938 的直连映射（见 vps-setup-st-gateway.sh）
 
 services:
   st-gateway:
@@ -9,9 +9,11 @@ services:
     ports:
       - "0.0.0.0:46938:80"
     volumes:
-      - ./nginx-st-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./st-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - luker_net
+    depends_on:
+      - tts-manager
 
 networks:
   luker_net:

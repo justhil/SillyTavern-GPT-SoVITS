@@ -1,0 +1,20 @@
+# 不用 Cloudflare：浏览器用同一端口访问酒馆 + TTS
+# http://<公网IP>:46939/         → luker
+# http://<公网IP>:46939/tts-mw  → tts-manager（扩展填这个，不要 :3000）
+
+services:
+  st-gateway:
+    image: nginx:alpine
+    container_name: st-gateway
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:46939:80"
+    volumes:
+      - ${TTS_ROOT:-/www/SillyTavern-GPT-SoVITS}/deploy/nginx-st-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - luker_net
+
+networks:
+  luker_net:
+    name: docker_default
+    external: true
