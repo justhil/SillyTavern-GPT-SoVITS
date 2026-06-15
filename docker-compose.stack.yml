@@ -6,30 +6,15 @@ services:
     image: python:3.11-slim
     container_name: genie-tts
     restart: unless-stopped
-    working_dir: /www/genie
     volumes:
       - ${GENIE_ROOT:-/www/genie}:/www/genie
+      - ${TTS_ROOT:-/www/SillyTavern-GPT-SoVITS}/deploy/docker-genie-cmd.sh:/start-genie.sh:ro
     environment:
       - PYTHONUNBUFFERED=1
       - GENIE_DATA_DIR=/www/genie/GenieData
-    command: >
-      bash -c "
-        if [ -x /www/genie/venv/bin/python ] && [ -f /www/genie/run_server.py ]; then
-          exec /www/genie/venv/bin/python /www/genie/run_server.py;
-        else
-          pip install -q genie-tts && python -c \"
-import os; os.environ.setdefault('GENIE_DATA_DIR','/www/genie/GenieData');
-import genie_tts as g; g.start_server(host='0.0.0.0', port=8000, workers=1)\";
-        fi
-      "
+    command: ["/bin/bash", "/start-genie.sh"]
     networks:
       - luker_net
-    healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=8)\""]
-      interval: 30s
-      timeout: 15s
-      retries: 5
-      start_period: 180s
 
   tts-manager:
     build:
@@ -50,12 +35,6 @@ import genie_tts as g; g.start_server(host='0.0.0.0', port=8000, workers=1)\";
     entrypoint: ["/bin/sh", "/app/deploy/docker-entrypoint-tts.sh"]
     networks:
       - luker_net
-    healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/ping', timeout=5)\""]
-      interval: 20s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
 
 networks:
   luker_net:
