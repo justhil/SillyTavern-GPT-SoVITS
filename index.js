@@ -29,6 +29,9 @@ import {
     setConnectionConfig,
     needsDockerMiddlewareSetup,
     getDockerSetupHintHtml,
+    getMixedContentHintHtml,
+    isMixedContentRisk,
+    TTS_REMOTE_CONFIG_KEY,
 } from './frontend/js/connection_host.js';
 
 // ================= 1. 中间件根地址（:3000，Docker 内需填宿主机 IP）=================
@@ -356,24 +359,30 @@ function initPlugin() {
 function showEmergencyConfig(currentApi) {
     if ($('#tts-emergency-box').length > 0) return;
 
+    const mixedHint = getMixedContentHintHtml(currentApi);
+
     const html = `
         <div id="tts-emergency-box" style="
             position: fixed; top: 10px; right: 10px; z-index: 999999;
             background: #2d3436; color: #fff; padding: 15px;
             border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             font-family: sans-serif; font-size: 14px; border: 1px solid #ff7675;
-            max-width: 250px;
+            max-width: 320px;
         ">
             <div style="font-weight:bold; color:#ff7675; margin-bottom:8px;">⚠️ 无法连接插件后端</div>
-            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>${getDockerSetupHintHtml()}</div>
+            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">尝试连接: ${currentApi} 失败。<br>${getDockerSetupHintHtml()}${mixedHint}</div>
 
-            <input type="text" id="tts-emergency-ip" placeholder="http://192.168.x.x:3000 或仅 IP"
+            <input type="text" id="tts-emergency-ip" placeholder="http://IP:3000 或 https://域名/tts-manager"
                 style="width:100%; box-sizing:border-box; padding:5px; margin-bottom:8px; border-radius:4px; border:none;">
 
             <button id="tts-emergency-save" style="
                 width:100%; padding:6px; background:#0984e3; color:white;
                 border:none; border-radius:4px; cursor:pointer;
             ">保存并重连</button>
+            <button id="tts-emergency-clear" style="
+                width:100%; margin-top:6px; padding:6px; background:#636e72; color:white;
+                border:none; border-radius:4px; cursor:pointer;
+            ">清除配置，自动检测</button>
 
             <div style="margin-top:8px; text-align:center;">
                 <button id="tts-emergency-close" style="background:none; border:none; color:#aaa; font-size:12px; text-decoration:underline; cursor:pointer;">关闭</button>
@@ -383,13 +392,19 @@ function showEmergencyConfig(currentApi) {
 
     $('body').append(html);
 
-    const saved = localStorage.getItem('tts_plugin_remote_config');
+    const saved = localStorage.getItem(TTS_REMOTE_CONFIG_KEY);
     if (saved) {
         try {
             const p = JSON.parse(saved);
-            if (p.ip) $('#tts-emergency-ip').val(p.ip);
+            $('#tts-emergency-ip').val(p.managerUrl || p.ip || '');
         } catch (e) { }
     }
+
+    $('#tts-emergency-clear').on('click', function () {
+        localStorage.removeItem(TTS_REMOTE_CONFIG_KEY);
+        alert('已清除，页面将刷新');
+        location.reload();
+    });
 
     $('#tts-emergency-close').on('click', function () {
         $('#tts-emergency-box').remove();

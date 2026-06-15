@@ -37,10 +37,14 @@ export function normalizeManagerBaseUrl(raw) {
     }
     try {
         const u = new URL(s);
-        if (!u.port) {
-            u.port = String(DEFAULT_MANAGER_PORT);
+        if (!u.port && u.protocol === 'http:') {
+            const hasPath = u.pathname && u.pathname !== '/';
+            if (!hasPath) {
+                u.port = String(DEFAULT_MANAGER_PORT);
+            }
         }
-        return u.origin;
+        let path = u.pathname.replace(/\/+$/, '') || '';
+        return `${u.origin}${path}`;
     } catch {
         return '';
     }
@@ -156,16 +160,33 @@ export function needsDockerMiddlewareSetup() {
     return cfg.dockerMode || isLikelyDockerSillyTavern();
 }
 
+export function isMixedContentRisk(managerBaseUrl) {
+    try {
+        if (typeof window === 'undefined' || !managerBaseUrl) return false;
+        if (window.location.protocol !== 'https:') return false;
+        return String(managerBaseUrl).toLowerCase().startsWith('http:');
+    } catch {
+        return false;
+    }
+}
+
+export function getMixedContentHintHtml(managerBaseUrl) {
+    if (!isMixedContentRisk(managerBaseUrl)) return '';
+    return `
+        <p style="margin:8px 0;line-height:1.45;color:#ff7675;font-size:12px;">
+            <b>HTTPS 酒馆不能请求 HTTP 中间件</b>（浏览器会静默拦截）。<br>
+            请用 Nginx 反代：<code>https://你的域名/tts-manager</code>，扩展里填该 HTTPS 地址；<br>
+            或暂时用 <b>http://</b> 打开酒馆（与中间件同为 HTTP）。
+        </p>`;
+}
+
 export function getDockerSetupHintHtml() {
     return `
         <p style="margin:0 0 8px;line-height:1.45;">
-            酒馆在 <b>Docker</b> 里时，容器内的 <code>127.0.0.1:3000</code> <b>不是</b>宿主机上的中间件。
+            中间件地址示例：<code>http://服务器IP:3000</code>（不是 Genie :8000）。
         </p>
         <p style="margin:0 0 8px;line-height:1.45;font-size:12px;color:#b2bec3;">
-            请在<b>宿主机</b>运行 <code>python manager.py</code>，然后填<b>宿主机局域网 IP</b>（Windows 用 <code>ipconfig</code>，Linux/Mac 用 <code>ip addr</code>）。
-        </p>
-        <p style="margin:0;font-size:12px;color:#fdcb6e;">
-            也可填完整地址：<code>http://192.168.x.x:3000</code>（不是 Genie 的 :8000）
+            Docker 酒馆：填<b>宿主机</b> IP。同机部署也建议填公网/内网 IP，不要填容器内 localhost。
         </p>
     `;
 }

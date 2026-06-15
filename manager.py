@@ -27,9 +27,8 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,  # 允许携带凭证
-    # 明确列出需要暴露的响应头 (带 credentials 时 * 通配符无效)
-    expose_headers=["X-Audio-Filename", "Content-Type", "Content-Length"]
+    allow_credentials=False,
+    expose_headers=["X-Audio-Filename", "Content-Type", "Content-Length"],
 )
 
 # 添加验证错误处理器

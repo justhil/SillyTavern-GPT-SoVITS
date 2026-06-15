@@ -19,10 +19,17 @@ def main():
     body = SCRIPT.read_text(encoding="utf-8")
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if PASS:
-        c.connect(HOST, username=USER, password=PASS, timeout=30)
-    else:
-        c.connect(HOST, username=USER, timeout=30)
+    if not PASS:
+        print("Set GENIE_VPS_PASS", file=sys.stderr)
+        sys.exit(1)
+    c.connect(
+        HOST,
+        username=USER,
+        password=PASS,
+        timeout=30,
+        allow_agent=False,
+        look_for_keys=False,
+    )
     sftp = c.open_sftp()
     remote = "/tmp/vps-setup-middleware.sh"
     with sftp.file(remote, "w") as f:
