@@ -8,9 +8,7 @@ from fastapi.responses import JSONResponse
 
 # 导入配置和路由
 from config import FRONTEND_DIR, init_settings
-from routers import data, tts, system
-from config import FRONTEND_DIR
-from routers import data, tts, system, admin, phone_call, speakers, eavesdrop, continuous_analysis, sovits_installer
+from routers import data, tts, system, admin, phone_call, speakers, eavesdrop, continuous_analysis, genie_admin
 
 # 导入自定义日志中间件
 from middleware.logging_middleware import LoggingMiddleware
@@ -147,92 +145,18 @@ app.include_router(phone_call.router, prefix="/api", tags=["Phone Call"])
 app.include_router(speakers.router, prefix="/api", tags=["Speakers Management"])
 app.include_router(eavesdrop.router, prefix="/api/eavesdrop", tags=["Eavesdrop Tracking"])
 app.include_router(continuous_analysis.router, prefix="/api", tags=["Continuous Analysis"])
-app.include_router(sovits_installer.router, tags=["GPT-SoVITS Installation"])
-
-
-# GPT-SoVITS 自动启动检查
-def auto_start_sovits():
-    """检查并自动启动 GPT-SoVITS 服务"""
-    import subprocess
-    import socket
-    from pathlib import Path
-    
-    try:
-        from routers.sovits_installer import load_sovits_config
-        config = load_sovits_config()
-        
-        # 检查是否配置了自动启动
-        if not config.auto_start:
-            print("[GPT-SoVITS] ⏸️  自动启动已禁用")
-            return
-        
-        # 检查是否已配置安装路径
-        if not config.install_path:
-            print("[GPT-SoVITS] ⚠️  未配置安装路径，请访问 http://localhost:3000/admin 进行配置")
-            return
-        
-        install_path = Path(config.install_path)
-        if not install_path.exists():
-            print(f"[GPT-SoVITS] ⚠️  安装路径不存在: {install_path}")
-            print("[GPT-SoVITS] ⚠️  请访问 http://localhost:3000/admin 重新配置")
-            return
-        
-        # 检查端口是否已被占用（可能已经在运行）
-        port = config.api_port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex(('127.0.0.1', port))
-        sock.close()
-        
-        if result == 0:
-            print(f"[GPT-SoVITS] ✅ 端口 {port} 已在运行，跳过自动启动")
-            return
-        
-        # 查找启动脚本
-        python_exe = install_path / "runtime" / "python.exe"
-        api_script = install_path / "api_v2.py"
-        config_yaml = install_path / "GPT_SoVITS" / "configs" / "tts_infer.yaml"
-        
-        if not python_exe.exists():
-            print(f"[GPT-SoVITS] ⚠️  未找到 Python: {python_exe}")
-            return
-        
-        if not api_script.exists():
-            print(f"[GPT-SoVITS] ⚠️  未找到 API 脚本: {api_script}")
-            return
-        
-        # 构建启动命令
-        cmd = [
-            str(python_exe),
-            str(api_script),
-            "-a", "127.0.0.1",
-            "-p", str(port)
-        ]
-        
-        if config_yaml.exists():
-            cmd.extend(["-c", str(config_yaml)])
-        
-        # 在新窗口中启动
-        print(f"[GPT-SoVITS] 🚀 正在启动服务 (端口: {port})...")
-        if os.name == 'nt':
-            subprocess.Popen(
-                cmd,
-                cwd=str(install_path),
-                creationflags=subprocess.CREATE_NEW_CONSOLE
-            )
-        else:
-            subprocess.Popen(cmd, cwd=str(install_path))
-        
-        print("[GPT-SoVITS] ✅ 服务已在新窗口中启动")
-        
-    except Exception as e:
-        print(f"[GPT-SoVITS] ❌ 自动启动失败: {e}")
-        print("[GPT-SoVITS] ⚠️  请手动启动或访问 http://localhost:3000/admin 配置")
+app.include_router(genie_admin.router)
 
 
 if __name__ == "__main__":
-    # 自动启动 GPT-SoVITS
-    auto_start_sovits()
-    
+    from config import get_genie_host
+    from services.genie_tts_client import check_connection
+    host = get_genie_host()
+    if check_connection(host):
+        print(f"[Genie TTS] ✅ API 可访问: {host}")
+    else:
+        print(f"[Genie TTS] ⚠️  无法连接 {host}，请在 /admin 配置 genie_host 并启动 genie-tts")
+
     # 必须是 0.0.0.0，否则局域网无法访问
     # access_log=False 禁用默认访问日志,使用自定义日志中间件
     uvicorn.run(app, host="0.0.0.0", port=3000, access_log=False)

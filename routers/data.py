@@ -2,7 +2,7 @@ import os
 import glob
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
-from config import init_settings, load_json, save_json, get_current_dirs, MAPPINGS_FILE, SETTINGS_FILE, _safe_load_for_update
+from config import init_settings, load_json, save_json, get_current_dirs, MAPPINGS_FILE, SETTINGS_FILE, _safe_load_for_update, get_genie_models
 from utils import scan_audio_files
 from schemas import BindRequest, UnbindRequest, CreateModelRequest, StyleRequest
 import json
@@ -88,7 +88,12 @@ def get_data():
             }
 
     mappings = load_json(MAPPINGS_FILE)
-    return { "models": models_data, "mappings": mappings, "settings": settings }
+    return {
+        "models": models_data,
+        "mappings": mappings,
+        "settings": settings,
+        "genie_models": get_genie_models(),
+    }
 
 @router.post("/bind_character")
 def bind(req: BindRequest):

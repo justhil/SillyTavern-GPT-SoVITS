@@ -18,6 +18,7 @@ from typing import Optional, Dict
 from contextlib import asynccontextmanager
 
 from config import load_json, SETTINGS_FILE, get_current_dirs, get_sovits_host
+from config import get_tts_engine
 
 
 class ModelWeightService:
@@ -310,23 +311,30 @@ class ModelWeightService:
         Returns:
             是否切换成功
         """
+        if get_tts_engine() == "genie":
+            from services.genie_bridge import resolve_genie_for_character
+            from services.genie_tts_client import ensure_character
+            info = resolve_genie_for_character(char_name)
+            if not info:
+                return False
+            host = get_sovits_host()
+            try:
+                ensure_character(host, info["genie_name"], info["onnx_dir"], info["language"])
+                return True
+            except Exception as e:
+                print(f"[ModelWeightService] Genie load failed: {e}")
+                return False
         model_config = self.get_model_config(char_name)
         if not model_config:
             return False
-        
         gpt_path = model_config["gpt_path"]
         sovits_path = model_config["sovits_path"]
-        
-        # 切换 GPT 权重
         gpt_result = self.set_gpt_weights(gpt_path)
         if not gpt_result["success"]:
             return False
-        
-        # 切换 SoVITS 权重
         sovits_result = self.set_sovits_weights(sovits_path)
         if not sovits_result["success"]:
             return False
-        
         return True
     
     def reset_state(self):

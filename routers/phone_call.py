@@ -285,7 +285,8 @@ async def parse_and_generate(req: ParseAndGenerateRequest):
                             segment=segment,
                             ref_audio=ref_audio,
                             tts_config=tts_config,
-                            previous_ref_audio=previous_ref_audio if emotion_changed else None
+                            previous_ref_audio=previous_ref_audio if emotion_changed else None,
+                            char_name=req.char_name,
                         )
                         audio_bytes_list.append(audio_bytes)
                         print(f"[ParseAndGenerate] ✅ 片段 {i+1} 生成成功: {len(audio_bytes)} 字节")
@@ -467,7 +468,8 @@ async def complete_generation(req: CompleteGenerationRequest):
                         segment=segment,
                         ref_audio=ref_audio,
                         tts_config=tts_config,
-                        previous_ref_audio=previous_ref_audio if emotion_changed else None
+                        previous_ref_audio=previous_ref_audio if emotion_changed else None,
+                        char_name=selected_speaker,
                     )
 
                     # 获取音频时长(用于音轨同步)

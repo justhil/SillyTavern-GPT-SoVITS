@@ -48,16 +48,16 @@
                 </header>
 
                 <div class="cards-grid">
-                    <!-- GPT-SoVITS 服务 -->
+                    <!-- Genie TTS -->
                     <div class="card">
                         <div class="card-header">
-                            <h3>🎙️ GPT-SoVITS 服务</h3>
+                            <h3>🎙️ Genie TTS API</h3>
                             <span class="status-badge" id="sovits-status">检测中...</span>
                         </div>
                         <div class="card-body">
                             <div class="info-item">
                                 <span class="label">地址:</span>
-                                <span class="value" id="sovits-url">http://127.0.0.1:9880</span>
+                                <span class="value" id="sovits-url">http://127.0.0.1:8000</span>
                             </div>
                             <div class="info-item">
                                 <span class="label">状态:</span>
@@ -132,74 +132,23 @@
                 </div>
 
                 <div class="cards-grid">
-                    <!-- GPT-SoVITS 安装配置卡片 -->
                     <div class="card" id="sovits-install-card" style="grid-column: span 2;">
                         <div class="card-header">
-                            <h3>📦 GPT-SoVITS 安装配置</h3>
-                            <span class="status-badge" id="sovits-install-status">未配置</span>
+                            <h3>🚀 Genie 推理后端</h3>
+                            <span class="status-badge" id="sovits-install-status">检测中...</span>
                         </div>
                         <div class="card-body">
-                            <!-- GPU 类型选择 -->
-                            <div class="form-group">
-                                <label>GPU 类型</label>
-                                <div class="radio-group" id="gpu-type-group">
-                                    <label class="radio-label">
-                                        <input type="radio" name="gpu-type" value="nvidia_general" checked>
-                                        <span>NVIDIA 通用版 (RTX 20/30/40)</span>
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="gpu-type" value="nvidia_50">
-                                        <span>NVIDIA 50系列 (RTX 50)</span>
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="gpu-type" value="amd" disabled>
-                                        <span>AMD 版 (暂未提供)</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- 安装路径 -->
-                            <div class="form-group">
-                                <label>GPT-SoVITS 安装路径</label>
-                                <input type="text" id="sovits-install-path" class="input"
-                                    placeholder="例: G:\GPT-SoVITS-v2pro-20250604">
-                                <small>GPT-SoVITS 整合包的根目录（包含 api_v2.py 的目录）</small>
-                            </div>
-
-                            <hr style="border-color: var(--border-color); margin: 1rem 0;">
-
-                            <!-- 自动启动选项 -->
-                            <div class="form-group">
-                                <label style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="sovits-auto-start" checked>
-                                    <span>启动插件时自动启动 GPT-SoVITS API</span>
-                                </label>
-                            </div>
-
-                            <!-- 操作按钮 -->
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem;">
-                                <button class="btn btn-success" onclick="saveSovitsConfig()">💾 保存配置</button>
-                                <button class="btn btn-primary" onclick="startSovitsService()">▶️ 启动服务</button>
-                                <button class="btn btn-danger" onclick="stopSovitsService()">⏹️ 停止服务</button>
-                                <button class="btn btn-secondary" onclick="testSovitsConnection()">🧪 测试连接</button>
-                            </div>
-
-                            <hr style="border-color: var(--border-color); margin: 1rem 0;">
-
-                            <!-- 下载链接 -->
-                            <div class="download-links">
-                                <small style="display: block; margin-bottom: 8px; color: var(--text-secondary);">💡
-                                    下载整合包：原作者仓库：https://github.com/RVC-Boss/GPT-SoVITS</small>
-                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <a href="https://www.modelscope.cn/models/FlowerCry/gpt-sovits-7z-pacakges/resolve/master/GPT-SoVITS-v2pro-20250604.7z"
-                                        target="_blank" class="btn btn-secondary" style="font-size: 0.875rem;">
-                                        📥 NVIDIA 通用版
-                                    </a>
-                                    <a href="https://www.modelscope.cn/models/FlowerCry/gpt-sovits-7z-pacakges/resolve/master/GPT-SoVITS-v2pro-20250604-nvidia50.7z"
-                                        target="_blank" class="btn btn-secondary" style="font-size: 0.875rem;">
-                                        📥 NVIDIA 50系列版
-                                    </a>
-                                </div>
+                            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                                本插件通过 <strong>Genie TTS HTTP API</strong> 合成语音，不再内置 Windows GPT-SoVITS 整合包。
+                                请在 VPS 或本机部署 <code>genie-tts</code>（默认端口 8000），并在「系统设置」填写 API 地址。
+                            </p>
+                            <p style="font-size: 0.875rem; color: var(--text-secondary);">
+                                角色 ONNX：在 <code>genie_character_models.json</code> 配置
+                                <code>genie_character</code>、<code>onnx_model_dir</code>，或把 ONNX 放在模型目录 <code>onnx/</code> 下。
+                                参考音频与 <code>audio_text</code> 需与 Genie <code>set_reference_audio</code> 要求一致。
+                            </p>
+                            <div style="margin-top: 1rem;">
+                                <button class="btn btn-secondary" onclick="testGenieConnection()">🧪 测试 Genie 连接</button>
                             </div>
                         </div>
                     </div>
@@ -259,7 +208,7 @@
                             <label>模型目录路径</label>
                             <input type="text" id="setting-base-dir" class="input"
                                 placeholder="例: G:\Models\MyCharacters">
-                            <small>存放 GPT-SoVITS 模型的根目录</small>
+                            <small>角色文件夹（参考音频等）；Genie ONNX 可放各模型 onnx/ 子目录</small>
                         </div>
 
                         <div class="form-group">
@@ -269,9 +218,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label>GPT-SoVITS API 地址</label>
-                            <input type="text" id="setting-sovits-host" class="input" value="http://127.0.0.1:9880">
-                            <small>GPT-SoVITS 推理服务的 API 地址</small>
+                            <label>Genie TTS API 地址</label>
+                            <input type="text" id="setting-sovits-host" class="input" value="http://127.0.0.1:8000">
+                            <small>Genie HTTP API 根地址（如 http://你的VPS:8000）</small>
                         </div>
 
                         <div class="form-group">

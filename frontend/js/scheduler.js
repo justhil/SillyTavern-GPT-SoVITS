@@ -24,15 +24,16 @@ export const TTS_Scheduler = {
     },
 
     validateModel(modelName, config) {
+        const engine = (window.TTS_State.CACHE.settings && window.TTS_State.CACHE.settings.tts_engine) || 'genie';
         let missing = [];
-        if (!config.gpt_path) missing.push("GPT权重");
-        if (!config.sovits_path) missing.push("SoVITS权重");
-
+        if (engine !== 'genie') {
+            if (!config.gpt_path) missing.push("GPT权重");
+            if (!config.sovits_path) missing.push("SoVITS权重");
+        }
         const langs = config.languages || {};
         if (Object.keys(langs).length === 0) {
             missing.push("参考音频 (reference_audios)");
         }
-
         if (missing.length > 0) {
             window.TTS_Utils.showNotification(`模型 "${modelName}" 缺失: ${missing.join(', ')}`, 'error');
             return false;
@@ -185,17 +186,18 @@ export const TTS_Scheduler = {
                 ref_audio_path: ref.path,
                 prompt_text: ref.text,
                 prompt_lang: "zh",
-                emotion: task.emotion
+                emotion: task.emotion,
+                char_name: task.charName,
             };
             return await window.TTS_API.checkCache(params);
         } catch { return { cached: false }; }
     },
 
     async switchModel(config) {
+        const engine = (window.TTS_State.CACHE.settings && window.TTS_State.CACHE.settings.tts_engine) || 'genie';
+        if (engine === 'genie') return;
         const CURRENT_LOADED = window.TTS_State.CURRENT_LOADED;
-
         if (CURRENT_LOADED.gpt_path === config.gpt_path && CURRENT_LOADED.sovits_path === config.sovits_path) return;
-
         if (CURRENT_LOADED.gpt_path !== config.gpt_path) {
             await window.TTS_API.switchWeights('proxy_set_gpt_weights', config.gpt_path);
             CURRENT_LOADED.gpt_path = config.gpt_path;
@@ -231,7 +233,8 @@ export const TTS_Scheduler = {
                 ref_audio_path: ref.path,
                 prompt_text: ref.text,
                 prompt_lang: promptLangCode,
-                emotion: emotion
+                emotion: emotion,
+                char_name: task.charName,
             };
 
             const { blob, filename } = await window.TTS_API.generateAudio(params);

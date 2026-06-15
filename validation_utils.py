@@ -72,20 +72,18 @@ def validate_audio_path(ref_audio_path: str) -> None:
 
 
 def check_sovits_connection(sovits_host: str, timeout: int = 3) -> None:
-    """
-    检测 SoVITS 服务连接性
-    
-    Args:
-        sovits_host: SoVITS 服务地址(如 http://127.0.0.1:9880)
-        timeout: 连接超时时间(秒)
-        
-    Raises:
-        HTTPException: 服务不可达时抛出 503 错误
-    """
+    """检测 TTS 后端连接（Genie 默认）。"""
+    from config import get_tts_engine
+    if get_tts_engine() == "genie":
+        from services.genie_tts_client import check_connection
+        if not check_connection(sovits_host, timeout=timeout):
+            raise HTTPException(
+                status_code=503,
+                detail=f"无法连接 Genie TTS API，请确认 genie-tts 已启动 (地址: {sovits_host})"
+            )
+        return
     try:
-        # 尝试访问健康检查端点或根路径,禁用代理避免端口重定向
         response = requests.get(f"{sovits_host}/", timeout=timeout, proxies={'http': None, 'https': None})
-        # 只要能连接上就算成功,不严格要求 200 状态码
         if response.status_code >= 500:
             raise HTTPException(
                 status_code=503,
@@ -113,7 +111,8 @@ def validate_tts_request(
     text_lang: str,
     ref_audio_path: str,
     prompt_lang: str,
-    sovits_host: str
+    sovits_host: str,
+    char_name: Optional[str] = None,
 ) -> None:
     """
     综合验证 TTS 请求的所有参数
@@ -131,8 +130,15 @@ def validate_tts_request(
     # 1. 验证必填参数
     validate_required_params(text, text_lang, ref_audio_path, prompt_lang)
     
-    # 2. 验证音频路径
     validate_audio_path(ref_audio_path)
-    
-    # 3. 检测服务连接性
+    from config import get_tts_engine
+    if get_tts_engine() == "genie":
+        if not char_name or not str(char_name).strip():
+            raise HTTPException(status_code=400, detail="Genie 模式需要 char_name（酒馆角色名）")
+        from services.genie_bridge import resolve_genie_for_character
+        if not resolve_genie_for_character(char_name):
+            raise HTTPException(
+                status_code=400,
+                detail=f"角色 {char_name} 未配置 Genie ONNX，请在 genie_character_models.json 或模型目录 onnx/ 下配置"
+            )
     check_sovits_connection(sovits_host)

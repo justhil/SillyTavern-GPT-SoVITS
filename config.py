@@ -14,7 +14,9 @@ FRONTEND_DIR = os.path.join(PLUGIN_ROOT, "frontend")
 DEFAULT_BASE_DIR = os.path.join(PLUGIN_ROOT, "MyCharacters")
 DEFAULT_CACHE_DIR = os.path.join(PLUGIN_ROOT, "Cache")
 MAX_CACHE_SIZE_MB = 500
-SOVITS_HOST = "http://127.0.0.1:9880"
+GENIE_HOST = "http://127.0.0.1:8000"
+SOVITS_HOST = GENIE_HOST
+GENIE_MODELS_FILE = os.path.join(PLUGIN_ROOT, "genie_character_models.json")
 
 # ================= 配置加载逻辑 =================
 def load_json(filename):
@@ -75,7 +77,9 @@ def init_settings():
         "default_lang": "Chinese",
         "iframe_mode": False,
         "bubble_style": "default",
-        "sovits_host": SOVITS_HOST
+        "sovits_host": GENIE_HOST,
+        "tts_engine": "genie",
+        "genie_host": GENIE_HOST,
     }
 
     for key, val in defaults.items():
@@ -240,9 +244,21 @@ def get_current_dirs():
     return s["base_dir"], s["cache_dir"]
 
 def get_sovits_host():
-    """获取配置的 GPT-SoVITS 服务地址"""
+    return get_genie_host()
+
+
+def get_genie_host():
     s = init_settings()
-    return s.get("sovits_host", SOVITS_HOST)
+    return s.get("genie_host") or s.get("sovits_host", GENIE_HOST)
+
+
+def get_tts_engine():
+    s = init_settings()
+    return s.get("tts_engine", "genie")
+
+
+def get_genie_models():
+    return load_json(GENIE_MODELS_FILE)
 
 
 def get_character_mappings():

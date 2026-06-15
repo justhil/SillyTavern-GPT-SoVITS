@@ -1,16 +1,42 @@
 import os
 import hashlib
 import requests
-import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from typing import Optional, Union, List
 from pydantic import BaseModel
 
-from config import get_current_dirs, get_sovits_host
+from config import get_current_dirs, get_sovits_host, get_tts_engine
 from utils import maintain_cache_size
 
 router = APIRouter()
+
+
+def _synthesize_to_wav(
+    char_name: str,
+    text: str,
+    ref_audio_path: str,
+    prompt_text: str,
+    prompt_lang: str,
+) -> bytes:
+    if get_tts_engine() == "genie":
+        from services.genie_bridge import prepare_genie_session
+        from services.genie_tts_client import synthesize as genie_synthesize
+        host, gname = prepare_genie_session(char_name, ref_audio_path, prompt_text or "", prompt_lang)
+        return genie_synthesize(host, gname, text, split_sentence=True)
+    url = f"{get_sovits_host()}/tts"
+    params = {
+        "text": text,
+        "text_lang": prompt_lang,
+        "ref_audio_path": ref_audio_path,
+        "prompt_text": prompt_text,
+        "prompt_lang": prompt_lang,
+        "streaming_mode": "false",
+    }
+    r = requests.get(url, params=params, timeout=120, proxies={"http": None, "https": None})
+    if r.status_code != 200:
+        raise HTTPException(status_code=500, detail=f"TTS Error: {r.status_code}")
+    return r.content
 
 
 class TTSRequest(BaseModel):
@@ -24,7 +50,8 @@ class TTSRequest(BaseModel):
     
     # 情绪参数(用于缓存策略)
     emotion: Optional[str] = "default"
-    
+    char_name: Optional[str] = None
+
     # 可选参数(带默认值)
     aux_ref_audio_paths: Optional[List[str]] = None
     top_k: int = 5
@@ -47,9 +74,8 @@ class TTSRequest(BaseModel):
 
 @router.get("/proxy_set_gpt_weights")
 async def proxy_set_gpt_weights(weights_path: str):
-    """
-    切换 GPT 权重（通过统一的 ModelWeightService，带锁保护）
-    """
+    if get_tts_engine() == "genie":
+        return {"status": 200, "detail": "Genie 模式无需切换 GPT 权重"}
     from services.model_weight_service import model_weight_service
     
     async with model_weight_service.acquire_lock("set_gpt_weights"):
@@ -69,9 +95,8 @@ async def proxy_set_gpt_weights(weights_path: str):
 
 @router.get("/proxy_set_sovits_weights")
 async def proxy_set_sovits_weights(weights_path: str):
-    """
-    切换 SoVITS 权重（通过统一的 ModelWeightService，带锁保护）
-    """
+    if get_tts_engine() == "genie":
+        return {"status": 200, "detail": "Genie 模式无需切换 SoVITS 权重"}
     from services.model_weight_service import model_weight_service
     
     async with model_weight_service.acquire_lock("set_sovits_weights"):
@@ -97,8 +122,9 @@ async def tts_proxy(
     prompt_text: str, 
     prompt_lang: str, 
     emotion: Optional[str] = "default",
-    streaming_mode: Optional[str] = "false", 
-    check_only: Optional[str] = None
+    char_name: Optional[str] = None,
+    streaming_mode: Optional[str] = "false",
+    check_only: Optional[str] = None,
 ):
     from services.model_weight_service import model_weight_service
     
@@ -158,7 +184,8 @@ async def tts_proxy(
                     text_lang=text_lang,
                     ref_audio_path=ref_audio_path,
                     prompt_lang=prompt_lang,
-                    sovits_host=get_sovits_host()
+                    sovits_host=get_sovits_host(),
+                    char_name=char_name,
                 )
             except HTTPException:
                 # 验证失败时直接抛出,让 FastAPI 处理
@@ -166,37 +193,28 @@ async def tts_proxy(
 
             maintain_cache_size(cache_dir)
 
-            # 转发请求给 SoVITS (非流式)
-            url = f"{get_sovits_host()}/tts"
-            params = {
-                "text": text,
-                "text_lang": text_lang,
-                "ref_audio_path": ref_audio_path,
-                "prompt_text": prompt_text,
-                "prompt_lang": prompt_lang,
-                "streaming_mode": "false" # 明确关闭流式
-            }
-
             try:
-                # 去掉 stream=True，增加超时时间,禁用代理
-                r = requests.get(
-                    url, 
-                    params=params, 
-                    timeout=120,
-                    proxies={'http': None, 'https': None}
+                wav_bytes = _synthesize_to_wav(
+                    char_name or "",
+                    text,
+                    ref_audio_path,
+                    prompt_text,
+                    prompt_lang,
                 )
+            except HTTPException:
+                raise
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            except RuntimeError as e:
+                raise HTTPException(status_code=503, detail=str(e))
             except requests.exceptions.RequestException:
-                raise HTTPException(status_code=503, detail="无法连接到 SoVITS 服务，请检查 9880 端口")
+                raise HTTPException(status_code=503, detail="无法连接 TTS 服务，请检查 Genie API 地址")
 
-            if r.status_code != 200:
-                raise HTTPException(status_code=500, detail=f"SoVITS Error: {r.status_code}")
-
-            # 保存到新缓存路径
             temp_path = new_cache_path + ".tmp"
 
             try:
                 with open(temp_path, "wb") as f:
-                    f.write(r.content)
+                    f.write(wav_bytes)
 
                 if os.path.exists(new_cache_path):
                     os.remove(new_cache_path)
@@ -301,28 +319,40 @@ async def tts_proxy_v2(req: TTSRequest, check_only: Optional[str] = None):
                 print(f"[Cache Migration V2 Failed] {e}")
             return FileResponse(old_cache_path, media_type="audio/wav", headers=custom_headers)
 
+        from validation_utils import validate_tts_request
+        validate_tts_request(
+            req.text,
+            req.text_lang,
+            req.ref_audio_path,
+            req.prompt_lang,
+            get_sovits_host(),
+            char_name=req.char_name,
+        )
+
         maintain_cache_size(cache_dir)
 
-        # 构建完整参数
-        url = f"{get_sovits_host()}/tts"
-        params = req.dict(exclude_none=True)  # 自动排除None值
-        params["streaming_mode"] = False  # 强制非流式
-
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                r = await client.get(url, params=params)
-        except httpx.RequestError:
-            raise HTTPException(status_code=503, detail="无法连接到 SoVITS 服务,请检查 9880 端口")
+            wav_bytes = _synthesize_to_wav(
+                req.char_name or "",
+                req.text,
+                req.ref_audio_path,
+                req.prompt_text,
+                req.prompt_lang,
+            )
+        except HTTPException:
+            raise
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except RuntimeError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        except requests.exceptions.RequestException:
+            raise HTTPException(status_code=503, detail="无法连接 TTS 服务,请检查 Genie API")
 
-        if r.status_code != 200:
-            raise HTTPException(status_code=500, detail=f"SoVITS Error: {r.status_code}")
-
-        # 保存到新缓存路径
         temp_path = new_cache_path + ".tmp"
 
         try:
             with open(temp_path, "wb") as f:
-                f.write(r.content)
+                f.write(wav_bytes)
 
             if os.path.exists(new_cache_path):
                 os.remove(new_cache_path)

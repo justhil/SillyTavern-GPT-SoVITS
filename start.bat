@@ -12,20 +12,8 @@ echo [INFO] Current path: %cd%
 :: ============================================================
 set "PYTHONPATH=%~dp0"
 
-:: ============================================================
-:: 优先使用内置 runtime（嵌入式 Python）
-:: ============================================================
-set "RUNTIME_PYTHON=%~dp0runtime\python\python.exe"
 set "PYTHON_CMD="
-
-if exist "%RUNTIME_PYTHON%" (
-    echo [INFO] Using embedded Python runtime...
-    set "PYTHON_CMD=%RUNTIME_PYTHON%"
-    goto :python_found
-)
-
-:: 回退到系统 Python
-echo [INFO] Embedded runtime not found, checking system Python...
+echo [INFO] Checking system Python...
 where python >nul 2>nul
 if %errorlevel% neq 0 (
     echo.

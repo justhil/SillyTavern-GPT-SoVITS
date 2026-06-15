@@ -22,29 +22,18 @@ class ServiceManager:
     
     @staticmethod
     def check_sovits_service(host: str) -> Dict[str, Any]:
-        """检查 GPT-SoVITS 服务状态"""
-        try:
-            # 禁用代理,避免端口重定向
-            response = requests.get(f"{host}/", timeout=2, proxies={'http': None, 'https': None})
-            return {
-                "status": "running",
-                "accessible": True,
-                "url": host
-            }
-        except requests.exceptions.ConnectionError:
-            return {
-                "status": "stopped",
-                "accessible": False,
-                "url": host,
-                "error": "无法连接到服务"
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "accessible": False,
-                "url": host,
-                "error": str(e)
-            }
+        """检查 TTS 后端（Genie API）状态"""
+        from services.genie_tts_client import check_connection
+        ok = check_connection(host, timeout=3)
+        if ok:
+            return {"status": "running", "accessible": True, "url": host, "engine": "genie"}
+        return {
+            "status": "stopped",
+            "accessible": False,
+            "url": host,
+            "engine": "genie",
+            "error": "无法连接 Genie API（/docs）",
+        }
     
     @staticmethod
     def check_python_env() -> Dict[str, Any]:

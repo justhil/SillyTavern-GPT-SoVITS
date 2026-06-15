@@ -559,7 +559,7 @@ async function loadSettings() {
         // 基础配置
         document.getElementById('setting-base-dir').value = settings.base_dir || '';
         document.getElementById('setting-cache-dir').value = settings.cache_dir || '';
-        document.getElementById('setting-sovits-host').value = settings.sovits_host || 'http://127.0.0.1:9880';
+        document.getElementById('setting-sovits-host').value = settings.genie_host || settings.sovits_host || 'http://127.0.0.1:8000';
         document.getElementById('setting-default-lang').value = settings.default_lang || 'Chinese';
 
         // ========== 分析引擎配置 ==========
@@ -654,7 +654,9 @@ async function saveSettings() {
     const settings = {
         base_dir: document.getElementById('setting-base-dir').value.trim(),
         cache_dir: document.getElementById('setting-cache-dir').value.trim(),
+        genie_host: document.getElementById('setting-sovits-host').value.trim(),
         sovits_host: document.getElementById('setting-sovits-host').value.trim(),
+        tts_engine: 'genie',
         default_lang: document.getElementById('setting-default-lang').value,
 
         // 分析引擎配置
@@ -1244,242 +1246,37 @@ async function performUpdate() {
 }
 
 
-// ==================== GPT-SoVITS 配置管理 ====================
+// ==================== Genie TTS ====================
 
-
-// 加载 GPT-SoVITS 配置
-async function loadSovitsConfig() {
+async function testGenieConnection() {
+    showNotification('正在测试 Genie API...', 'info');
     try {
-        const response = await fetch('/api/sovits/config');
-        if (!response.ok) return;
-
+        const response = await fetch('/api/genie/test');
         const data = await response.json();
-        const config = data.config;
-
-        if (config.install_path) {
-            document.getElementById('sovits-install-path').value = config.install_path;
-        }
-
-        if (config.version_type) {
-            const radio = document.querySelector(`input[name="gpu-type"][value="${config.version_type}"]`);
-            if (radio) radio.checked = true;
-        }
-
-        document.getElementById('sovits-auto-start').checked = config.auto_start !== false;
-
-        // 更新状态徽章
-        const statusBadge = document.getElementById('sovits-install-status');
-        if (config.installed && config.install_path) {
-            statusBadge.textContent = '已配置';
-            statusBadge.className = 'status-badge status-success';
-        } else {
-            statusBadge.textContent = '未配置';
-            statusBadge.className = 'status-badge status-warning';
-        }
-    } catch (error) {
-        console.error('加载 GPT-SoVITS 配置失败:', error);
-    }
-}
-
-// 保存 GPT-SoVITS 配置
-async function saveSovitsConfig() {
-    const config = {
-        installed: true,
-        version_type: document.querySelector('input[name="gpu-type"]:checked').value,
-        install_path: document.getElementById('sovits-install-path').value.trim(),
-        auto_start: document.getElementById('sovits-auto-start').checked,
-        api_port: 9880
-    };
-
-    if (!config.install_path) {
-        showNotification('请填写 GPT-SoVITS 安装路径', 'warning');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/sovits/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config)
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showNotification('GPT-SoVITS 配置已保存', 'success');
-            loadSovitsConfig(); // 刷新状态
-        } else {
-            showNotification(data.detail || '保存失败', 'error');
-        }
-    } catch (error) {
-        console.error('保存配置失败:', error);
-        showNotification('保存配置失败', 'error');
-    }
-}
-
-// 解压 GPT-SoVITS 压缩包
-async function extractSovitsPackage() {
-    const archivePath = document.getElementById('sovits-archive-path').value.trim();
-    const extractTo = document.getElementById('sovits-extract-to').value.trim();
-
-    if (!archivePath) {
-        showNotification('请填写压缩包路径', 'warning');
-        return;
-    }
-
-    if (!extractTo) {
-        showNotification('请填写解压目标目录', 'warning');
-        return;
-    }
-
-    const progressDiv = document.getElementById('extract-progress');
-    const progressBar = document.getElementById('extract-progress-bar');
-    const progressText = document.getElementById('extract-progress-text');
-
-    progressDiv.style.display = 'block';
-    progressBar.style.width = '0%';
-    progressText.textContent = '正在解压，请稍候（文件较大，可能需要几分钟）...';
-
-    try {
-        const response = await fetch('/api/sovits/extract', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                archive_path: archivePath,
-                extract_to: extractTo,
-                delete_after: true
-            })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            progressBar.style.width = '100%';
-            progressText.textContent = `解压完成！路径: ${data.extracted_path}`;
-
-            // 自动填充安装路径
-            document.getElementById('sovits-install-path').value = data.extracted_path;
-
-            showNotification('解压完成！已自动填充安装路径', 'success');
-
-            // 切换到手动模式显示路径
-            document.querySelector('input[name="install-mode"][value="manual"]').checked = true;
-            toggleInstallMode();
-        } else {
-            progressText.textContent = '解压失败';
-            showNotification(data.detail || '解压失败', 'error');
-        }
-    } catch (error) {
-        console.error('解压失败:', error);
-        progressText.textContent = '解压失败';
-        showNotification('解压失败，请检查路径是否正确', 'error');
-    }
-}
-
-// 启动 GPT-SoVITS 服务
-async function startSovitsService() {
-    showNotification('正在启动 GPT-SoVITS 服务...', 'info');
-
-    try {
-        const response = await fetch('/api/sovits/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            showNotification(`GPT-SoVITS 服务已启动 (PID: ${data.pid})`, 'success');
-            // 刷新仪表盘状态
-            loadDashboard();
-            loadSovitsStatus();
-        } else {
-            showNotification(data.detail || data.message || '启动失败', 'error');
-        }
-    } catch (error) {
-        console.error('启动服务失败:', error);
-        showNotification('启动服务失败', 'error');
-    }
-}
-
-// 停止 GPT-SoVITS 服务
-async function stopSovitsService() {
-    showNotification('正在停止 GPT-SoVITS 服务...', 'info');
-
-    try {
-        const response = await fetch('/api/sovits/stop', {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-
         if (data.success) {
-            showNotification('GPT-SoVITS 服务已停止', 'success');
-            // 刷新状态
-            loadDashboard();
-            loadSovitsStatus();
+            showNotification(`Genie 连接成功: ${data.url}`, 'success');
         } else {
-            showNotification(data.message || '停止失败', 'warning');
+            showNotification('无法连接 Genie API', 'error');
         }
-    } catch (error) {
-        console.error('停止服务失败:', error);
-        showNotification('停止服务失败', 'error');
+        loadDashboard();
+    } catch (e) {
+        showNotification('测试失败', 'error');
     }
 }
 
-// 测试 GPT-SoVITS 连接
-async function testSovitsConnection() {
-    showNotification('正在测试连接...', 'info');
-
+async function loadGenieDashboardCard() {
     try {
-        const response = await fetch('/api/sovits/test', {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification(`连接成功！端口: ${data.port}`, 'success');
-        } else {
-            showNotification(data.message || '连接失败', 'error');
-        }
-    } catch (error) {
-        console.error('测试连接失败:', error);
-        showNotification('测试连接失败', 'error');
-    }
-}
-
-// 加载 GPT-SoVITS 服务状态
-async function loadSovitsStatus() {
-    try {
-        const response = await fetch('/api/sovits/status');
+        const response = await fetch('/api/genie/status');
         if (!response.ok) return;
-
-        const status = await response.json();
-
-        // 更新安装状态徽章
-        const statusBadge = document.getElementById('sovits-install-status');
-        if (status.api_reachable) {
-            statusBadge.textContent = '运行中';
-            statusBadge.className = 'status-badge status-success';
-        } else if (status.installed && status.install_path) {
-            statusBadge.textContent = '已配置';
-            statusBadge.className = 'status-badge status-warning';
-        } else {
-            statusBadge.textContent = '未配置';
-            statusBadge.className = 'status-badge';
+        const data = await response.json();
+        const badge = document.getElementById('sovits-install-status');
+        if (badge) {
+            badge.textContent = data.accessible ? '可访问' : '不可达';
+            badge.className = 'status-badge ' + (data.accessible ? 'status-success' : 'status-error');
         }
-    } catch (error) {
-        console.error('加载 GPT-SoVITS 状态失败:', error);
-    }
+    } catch (_) {}
 }
 
-// 页面加载时也加载 GPT-SoVITS 配置
 document.addEventListener('DOMContentLoaded', () => {
-    // 延迟加载，确保其他初始化完成
-    setTimeout(() => {
-        loadSovitsConfig();
-        loadSovitsStatus();
-    }, 500);
+    setTimeout(loadGenieDashboardCard, 500);
 });

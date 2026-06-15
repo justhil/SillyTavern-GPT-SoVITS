@@ -187,7 +187,8 @@ class EavesdropService:
                             segment=emotion_segment,
                             ref_audio=ref_audio,
                             tts_config=tts_config,
-                            previous_ref_audio=None  # 分组生成时不使用情绪过渡
+                            previous_ref_audio=None,
+                            char_name=speaker,
                         )
                         
                         audio_results[original_index] = audio_bytes
