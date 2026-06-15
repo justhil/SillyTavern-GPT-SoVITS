@@ -38,13 +38,78 @@ class MatchRequest(BaseModel):
     chat_branch: Optional[str] = None
 # 定义收藏文件路径 (Legacy JSON path removed)
 
+def _scan_refs_to_languages_map(folder_name: str, base_dir: str) -> dict:
+    """Genie refs + MyCharacters reference_audios → 扩展用的 languages 结构。"""
+    from services.genie_catalog import list_reference_audios_for_folder
+
+    languages_map = {}
+    audios = list_reference_audios_for_folder(folder_name, base_dir)
+    for a in audios:
+        lang = a.get("language") or "Chinese"
+        if lang not in languages_map:
+            languages_map[lang] = []
+        languages_map[lang].append(
+            {
+                "path": a["path"],
+                "text": a.get("text") or "",
+                "emotion": a.get("emotion") or "default",
+                "filename": a.get("filename") or "",
+            }
+        )
+    ref_dir = os.path.join(base_dir, folder_name, "reference_audios")
+    if os.path.exists(ref_dir):
+        root_refs = scan_audio_files(ref_dir)
+        if root_refs:
+            languages_map.setdefault("default", []).extend(root_refs)
+        with os.scandir(ref_dir) as it:
+            for entry in it:
+                if entry.is_dir():
+                    raw_folder_name = entry.name
+                    target_lang_key = "Chinese" if raw_folder_name == "中文" else raw_folder_name
+                    emotions_subdir = os.path.join(entry.path, "emotions")
+                    found_refs = []
+                    if os.path.exists(emotions_subdir):
+                        found_refs = scan_audio_files(emotions_subdir)
+                    else:
+                        found_refs = scan_audio_files(entry.path)
+                    if found_refs:
+                        languages_map.setdefault(target_lang_key, []).extend(found_refs)
+    return languages_map
+
+
+def _build_models_data_genie(settings: dict) -> dict:
+    from services.genie_catalog import (
+        scan_genie_character_folders,
+        sync_genie_models_json_from_scan,
+    )
+
+    sync_genie_models_json_from_scan()
+    base_dir = settings.get("base_dir") or ""
+    models_data = {}
+    for item in scan_genie_character_folders():
+        name = item["folder_name"]
+        languages_map = _scan_refs_to_languages_map(name, base_dir)
+        models_data[name] = {
+            "gpt_path": "",
+            "sovits_path": "",
+            "onnx_model_dir": item.get("onnx_model_dir", ""),
+            "genie_character": item.get("genie_character", name),
+            "engine": "genie",
+            "languages": languages_map,
+        }
+    return models_data
+
+
 @router.get("/get_data")
 def get_data():
     settings = init_settings()
     base_dir = settings["base_dir"]
+    engine = settings.get("tts_engine", "genie")
     models_data = {}
 
-    if os.path.exists(base_dir):
+    if engine == "genie":
+        models_data = _build_models_data_genie(settings)
+    elif os.path.exists(base_dir):
         for folder_name in os.listdir(base_dir):
             folder_path = os.path.join(base_dir, folder_name)
             if not os.path.isdir(folder_path): continue
@@ -56,12 +121,10 @@ def get_data():
             languages_map = {}
 
             if os.path.exists(ref_dir):
-                # 1. 扫描根目录 (兼容旧模式)
                 root_refs = scan_audio_files(ref_dir)
                 if root_refs:
                     languages_map["default"] = root_refs
 
-                # 2. 扫描子文件夹 (多语言支持)
                 with os.scandir(ref_dir) as it:
                     for entry in it:
                         if entry.is_dir():

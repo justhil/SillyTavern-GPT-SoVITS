@@ -198,8 +198,12 @@ export const TTS_UI = window.TTS_UI;
         // 获取模型数据
         const models = (CTX && CTX.CACHE && CTX.CACHE.models) ? CTX.CACHE.models : {};
 
+        const engine = (CTX && CTX.CACHE && CTX.CACHE.settings && CTX.CACHE.settings.tts_engine) || 'genie';
         if (Object.keys(models).length === 0) {
-            $select.append('<option disabled>暂无模型文件</option>');
+            const hint = engine === 'genie'
+                ? '暂无 Genie 模型（检查 /www/genie/characters 或中间件 get_data）'
+                : '暂无模型文件';
+            $select.append(`<option disabled>${hint}</option>`);
             return;
         }
 

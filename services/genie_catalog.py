@@ -104,7 +104,20 @@ def list_reference_audios_for_folder(folder_name: str, base_dir: str) -> List[Di
             return
         seen.add(key)
         fn = os.path.basename(full_path)
-        emotion = fn.split("_")[0] if "_" in fn else "default"
+        stem = os.path.splitext(fn)[0]
+        emotion = stem.split("_")[0] if "_" in stem else "default"
+        prompt_text = ""
+        txt_path = os.path.join(os.path.dirname(full_path), stem + ".txt")
+        if os.path.isfile(txt_path):
+            try:
+                with open(txt_path, encoding="utf-8", errors="replace") as tf:
+                    prompt_text = tf.read().strip()[:500]
+            except OSError:
+                pass
+        if not prompt_text and "_" in stem:
+            prompt_text = stem.split("_", 1)[1]
+        elif not prompt_text:
+            prompt_text = stem
         audios.append(
             {
                 "filename": fn,
@@ -112,6 +125,7 @@ def list_reference_audios_for_folder(folder_name: str, base_dir: str) -> List[Di
                 "relative_path": rel,
                 "language": "Chinese",
                 "emotion": emotion,
+                "text": prompt_text,
                 "size": os.path.getsize(full_path),
                 "source": source,
             }

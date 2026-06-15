@@ -28,7 +28,9 @@ MyCharacters/
 逻辑与旧版一致，**按「酒馆角色卡名字」绑定模型文件夹**，合成时自动 `load_character` + 按情绪选参考音频。
 
 1. 启动中间件 `manager.py`，打开 `http://localhost:3000/admin`。
-2. 在 **模型管理** 里确认 `MyCharacters` 下已有对应文件夹和 `reference_audios`。
+2. 在 **模型管理** 里确认模型可见：
+   - **Genie 模式**：列表来自 **`/www/genie/characters`**（含 ONNX 的文件夹，如 `墨白`），参考音来自 **`/www/genie/refs/<文件夹名>/`**，不必在 `MyCharacters` 里放 `.ckpt/.pth`。
+   - 若下拉为空：检查中间件 `GET /get_data` 的 `models`、VPS 上 `character_mappings.json` 与 `genie_character_models.json`。
 3. 在酒馆插件 UI（或扩展面板）里：**角色名 → 绑定到模型文件夹**（写入 `character_mappings.json`）。
    - 例：酒馆卡叫「墨白」→ 绑定文件夹 `墨白`。
 4. 对话里该说话人的气泡会用绑定文件夹里的参考音频；换角色 = 换绑定或换说话人（多角色对话按 `data-voice-name`）。
