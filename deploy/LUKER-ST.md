@@ -50,3 +50,5 @@ bash deploy/vps-configure-luker-tts.sh
 - `st.justhil.uk` → `http://luker:2345`
 
 改后：`docker restart cloudflared-sillytavern`
+
+**隧道不会配？** 看 **`deploy/CLOUDFLARE-TUNNEL.md`**（在 Cloudflare 网页加 `tts.justhil.uk`，不要重复 docker run token）。
