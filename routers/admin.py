@@ -23,25 +23,42 @@ async def get_system_status():
 
 @router.get("/models")
 async def get_models():
-    """获取所有模型列表"""
+    """获取所有模型列表（Genie 模式扫描 characters + refs）"""
     settings = init_settings()
-    base_dir = settings.get("base_dir")
-    
-    if not base_dir or not os.path.exists(base_dir):
+    base_dir = settings.get("base_dir") or ""
+    engine = settings.get("tts_engine", "genie")
+
+    if engine == "genie":
+        from services.genie_catalog import (
+            get_genie_characters_root,
+            get_genie_refs_root,
+            scan_genie_character_folders,
+            sync_genie_models_json_from_scan,
+        )
+
+        sync_genie_models_json_from_scan()
+        models = scan_genie_character_folders()
+        if base_dir and os.path.isdir(base_dir):
+            manager = ModelManager(base_dir)
+            legacy = {m["name"]: m for m in manager.scan_models()}
+            names = {m["name"] for m in models}
+            for name, m in legacy.items():
+                if name not in names:
+                    m["engine"] = "legacy"
+                    models.append(m)
         return {
-            "models": [],
+            "models": models,
             "base_dir": base_dir,
-            "error": "模型目录不存在"
+            "genie_characters_root": get_genie_characters_root(),
+            "genie_refs_root": get_genie_refs_root(),
+            "total": len(models),
+            "engine": "genie",
         }
-    
+
+    if not base_dir or not os.path.exists(base_dir):
+        return {"models": [], "base_dir": base_dir, "error": "模型目录不存在"}
     manager = ModelManager(base_dir)
-    models = manager.scan_models()
-    
-    return {
-        "models": models,
-        "base_dir": base_dir,
-        "total": len(models)
-    }
+    return {"models": manager.scan_models(), "base_dir": base_dir, "total": len(manager.scan_models())}
 
 @router.post("/models/create")
 async def create_model(
@@ -73,21 +90,18 @@ async def create_model(
 
 @router.get("/models/{model_name}/audios")
 async def get_model_audios(model_name: str):
-    """获取指定模型的参考音频列表"""
     settings = init_settings()
-    base_dir = settings.get("base_dir")
-    
+    base_dir = settings.get("base_dir") or ""
+    if settings.get("tts_engine", "genie") == "genie":
+        from services.genie_catalog import list_reference_audios_for_folder
+
+        audios = list_reference_audios_for_folder(model_name, base_dir)
+        return {"model_name": model_name, "audios": audios, "total": len(audios)}
     if not base_dir:
         raise HTTPException(status_code=400, detail="模型目录未配置")
-    
     manager = ModelManager(base_dir)
     audios = manager.get_reference_audios(model_name)
-    
-    return {
-        "model_name": model_name,
-        "audios": audios,
-        "total": len(audios)
-    }
+    return {"model_name": model_name, "audios": audios, "total": len(audios)}
 
 @router.post("/models/{model_name}/audios/upload")
 async def upload_audio(
@@ -284,37 +298,31 @@ async def update_settings(settings: dict):
 
 @router.get("/models/{model_name}/audios/stream")
 async def stream_audio(model_name: str, relative_path: str):
-    """流式传输参考音频文件"""
     settings = init_settings()
-    base_dir = settings.get("base_dir")
-    
-    if not base_dir:
-        raise HTTPException(status_code=400, detail="模型目录未配置")
-    
-    # 构建完整路径 (relative_path 是相对于 reference_audios 目录的)
+    base_dir = settings.get("base_dir") or ""
+    if settings.get("tts_engine", "genie") == "genie":
+        from services.genie_catalog import list_reference_audios_for_folder
+
+        base_dir = settings.get("base_dir") or ""
+        for a in list_reference_audios_for_folder(model_name, base_dir):
+            if a["relative_path"] == relative_path.replace("\\", "/") or a["relative_path"].endswith(
+                relative_path.split("/")[-1]
+            ):
+                audio_path = a["path"]
+                if os.path.isfile(audio_path):
+                    return FileResponse(audio_path, media_type="audio/wav", headers={"Accept-Ranges": "bytes"})
+        raise HTTPException(status_code=404, detail="音频文件不存在")
+
     model_path = os.path.join(base_dir, model_name)
     ref_audio_dir = os.path.join(model_path, "reference_audios")
-    # 将前端的正斜杠路径转换为系统路径分隔符
-    relative_path = relative_path.replace('/', os.sep)
-    audio_path = os.path.join(ref_audio_dir, relative_path)
-    
-    # 安全验证:确保路径在模型目录内
-    audio_path = os.path.normpath(audio_path)
+    relative_path = relative_path.replace("/", os.sep)
+    audio_path = os.path.normpath(os.path.join(ref_audio_dir, relative_path))
     model_path = os.path.normpath(model_path)
-    
     if not audio_path.startswith(model_path):
         raise HTTPException(status_code=403, detail="非法路径访问")
-    
-    # 检查文件是否存在
-    if not os.path.exists(audio_path):
+    if not os.path.isfile(audio_path):
         raise HTTPException(status_code=404, detail="音频文件不存在")
-    
-    # 返回音频文件
-    return FileResponse(
-        audio_path,
-        media_type="audio/wav",
-        headers={"Accept-Ranges": "bytes"}
-    )
+    return FileResponse(audio_path, media_type="audio/wav", headers={"Accept-Ranges": "bytes"})
 
 # ==================== 版本管理 ====================
 

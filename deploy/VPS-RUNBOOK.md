@@ -50,7 +50,10 @@
 | 配置项 | 位置 | 值（VPS） |
 |--------|------|-----------|
 | Genie API | `system_settings.json` → `genie_host` | `http://172.17.0.1:8429`（容器访问宿主机） |
-| 中间件鉴权 | 环境变量 `TTS_MW_API_KEY` 或 Admin「中间件 API 密钥」 | 非空则扩展须带 `X-TTS-API-Key` |
+| 中间件 API 鉴权 | `TTS_MW_API_KEY` 或「中间件 API 密钥」 | 扩展请求头 `X-TTS-API-Key` |
+| 管理页登录 | `ADMIN_PANEL_PASSWORD` 或「管理面板登录密码」 | `/admin` 需 cookie 登录 |
+| Genie 目录 | `genie_characters_root` / `GENIE_CHARACTERS_ROOT` | 默认 `/www/genie/characters` |
+| 参考音 | `genie_refs_root` / `GENIE_REFS_ROOT` | 默认 `/www/genie/refs` |
 | 角色映射 | `character_mappings.json`（gitignore） | 例 墨白→墨白 |
 | Genie 模型 | `genie_character_models.json` | 墨白 ONNX 路径 |
 

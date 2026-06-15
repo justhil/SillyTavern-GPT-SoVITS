@@ -47,6 +47,18 @@ def resolve_genie_for_character(char_name: str) -> Optional[Dict]:
             "onnx_dir": e["onnx_model_dir"],
             "language": e.get("language", "zh"),
         }
+    from services.genie_catalog import get_genie_characters_root, resolve_onnx_dir
+
+    groot = os.path.join(get_genie_characters_root(), folder)
+    if os.path.isdir(groot) and os.path.isfile(
+        os.path.join(resolve_onnx_dir(groot), "vits_fp32.onnx")
+    ):
+        return {
+            "model_folder": folder,
+            "genie_name": folder,
+            "onnx_dir": resolve_onnx_dir(groot),
+            "language": "zh",
+        }
     base_dir, _ = get_current_dirs()
     onnx = os.path.join(base_dir, folder, "onnx")
     if os.path.isdir(onnx) and os.path.isfile(os.path.join(onnx, "vits_fp32.onnx")):

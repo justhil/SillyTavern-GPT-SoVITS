@@ -9,10 +9,12 @@ from fastapi.responses import JSONResponse
 # 导入配置和路由
 from config import FRONTEND_DIR, init_settings
 from routers import data, tts, system, admin, phone_call, speakers, eavesdrop, continuous_analysis, genie_admin
+from routers import admin_auth_routes
 
 # 导入自定义日志中间件
 from middleware.logging_middleware import LoggingMiddleware
 from middleware.api_auth import MiddlewareApiKeyMiddleware
+from middleware.admin_auth import AdminPanelAuthMiddleware
 
 # 初始化配置(确保 system_settings.json 和目录存在)
 init_settings()
@@ -54,6 +56,7 @@ async def strip_tts_mw_prefix(request: Request, call_next):
     return response
 
 
+app.add_middleware(AdminPanelAuthMiddleware)
 app.add_middleware(MiddlewareApiKeyMiddleware)
 app.add_middleware(LoggingMiddleware)
 
@@ -175,6 +178,7 @@ async def serve_eavesdrop_audio(filename: str):
 app.include_router(data.router, tags=["Data Management"])
 app.include_router(tts.router, tags=["TTS Core"])
 app.include_router(system.router, tags=["System Settings"])
+app.include_router(admin_auth_routes.router, prefix="/api/admin", tags=["Admin Auth"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin Panel"])
 app.include_router(phone_call.router, prefix="/api", tags=["Phone Call"])
 app.include_router(speakers.router, prefix="/api", tags=["Speakers Management"])

@@ -231,6 +231,12 @@
                         </div>
 
                         <div class="form-group">
+                            <label>管理面板登录密码</label>
+                            <input type="password" id="setting-admin-panel-password" class="input" placeholder="留空表示无需登录即可打开 /admin" autocomplete="new-password">
+                            <small>与酒馆扩展 API 密钥不同；设置后访问管理页需先登录。</small>
+                        </div>
+
+                        <div class="form-group">
                             <label>中间件 API 密钥（公网暴露时必填）</label>
                             <input type="password" id="setting-middleware-api-key" class="input" placeholder="留空表示不鉴权" autocomplete="new-password">
                             <small>保存后，酒馆扩展「中间件连接」须填<b>相同密钥</b>。Docker 若设置了环境变量 <code>TTS_MW_API_KEY</code> 则优先生效。管理页 /admin 不受此限制。</small>

@@ -75,3 +75,22 @@ async def upsert_model(entry: GenieModelEntry):
 async def test_genie():
     host = get_genie_host()
     return {"success": check_connection(host), "url": host}
+
+
+@router.get("/catalog")
+async def genie_catalog():
+    from services.genie_catalog import (
+        get_genie_characters_root,
+        get_genie_refs_root,
+        scan_genie_character_folders,
+        sync_genie_models_json_from_scan,
+    )
+
+    sync_genie_models_json_from_scan()
+    folders = scan_genie_character_folders()
+    return {
+        "characters_root": get_genie_characters_root(),
+        "refs_root": get_genie_refs_root(),
+        "characters": folders,
+        "total": len(folders),
+    }

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理面板登录</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <script>
+        (function () {
+            var p = location.pathname || '';
+            var i = p.indexOf('/admin');
+            window.__TTS_MW_PREFIX__ = i > 0 ? p.slice(0, i) : '';
+        })();
+    </script>
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+    <div class="settings-form" style="max-width:360px;width:100%;padding:24px;">
+        <h2 style="margin-bottom:16px;">🎙️ TTS 管理登录</h2>
+        <div class="form-group">
+            <label>管理密码</label>
+            <input type="password" id="login-password" class="input" autocomplete="current-password">
+        </div>
+        <p id="login-error" style="color:#ff7675;display:none;margin:8px 0;"></p>
+        <button class="btn btn-primary" id="login-btn" style="width:100%;">登录</button>
+    </div>
+    <script>
+        const prefix = window.__TTS_MW_PREFIX__ || '';
+        const api = prefix + '/api/admin/auth';
+        fetch(api + '/status').then(r => r.json()).then(s => {
+            if (!s.password_required || s.authenticated) {
+                location.href = prefix + '/admin/';
+            }
+        });
+        document.getElementById('login-btn').onclick = async () => {
+            const pw = document.getElementById('login-password').value;
+            const res = await fetch(api + '/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pw }),
+                credentials: 'include',
+            });
+            const data = await res.json();
+            if (data.success) location.href = prefix + '/admin/';
+            else {
+                const el = document.getElementById('login-error');
+                el.textContent = data.detail || '登录失败';
+                el.style.display = 'block';
+            }
+        };
+    </script>
+</body>
+</html>

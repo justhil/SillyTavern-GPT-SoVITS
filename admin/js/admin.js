@@ -16,6 +16,17 @@ function apiRoot() {
 
 const API_BASE = `${apiRoot()}/admin`;
 const GENIE_API = `${apiRoot()}/genie`;
+const AUTH_API = `${apiRoot()}/admin/auth`;
+
+async function adminFetch(url, options = {}) {
+    const res = await fetch(url, { ...options, credentials: 'include' });
+    if (res.status === 401) {
+        const prefix = window.__TTS_MW_PREFIX__ || '';
+        location.href = prefix + '/admin/login.html';
+        throw new Error('unauthorized');
+    }
+    return res;
+}
 
 function normalizeGenieHostInput(url) {
     let u = (url || '').trim().replace(/\/$/, '');
@@ -80,7 +91,7 @@ function switchPage(pageName) {
 // ==================== 仪表盘 ====================
 async function loadDashboard() {
     try {
-        const response = await fetch(`${API_BASE}/status`);
+        const response = await adminFetch(`${API_BASE}/status`);
         const data = await response.json();
 
         // GPT-SoVITS 服务
@@ -120,7 +131,7 @@ function refreshStatus() {
 // ==================== 模型管理 ====================
 async function loadModels() {
     try {
-        const response = await fetch(`${API_BASE}/models`);
+        const response = await adminFetch(`${API_BASE}/models`);
         const data = await response.json();
 
         currentModels = data.models || [];
@@ -344,7 +355,7 @@ async function loadAudios() {
     batchEmotionBtn.disabled = false;
 
     try {
-        const response = await fetch(`${API_BASE}/models/${encodeURIComponent(modelName)}/audios`);
+        const response = await adminFetch(`${API_BASE}/models/${encodeURIComponent(modelName)}/audios`);
         const data = await response.json();
 
         renderAudios(data.audios || []);
@@ -581,7 +592,7 @@ function bindSettingsTabs() {
 // ==================== 配置管理 ====================
 async function loadSettings() {
     try {
-        const response = await fetch(`${API_BASE}/settings`);
+        const response = await adminFetch(`${API_BASE}/settings`);
         const settings = await response.json();
 
         // 基础配置
@@ -591,6 +602,8 @@ async function loadSettings() {
             settings.genie_host || settings.sovits_host || 'http://127.0.0.1:8429'
         );
         document.getElementById('setting-middleware-api-key').value = settings.middleware_api_key || '';
+        const ap = document.getElementById('setting-admin-panel-password');
+        if (ap) ap.value = settings.middleware_admin_password || settings.admin_panel_password || '';
         document.getElementById('setting-default-lang').value = settings.default_lang || 'Chinese';
 
         // ========== 分析引擎配置 ==========
@@ -688,6 +701,7 @@ async function saveSettings() {
         genie_host: normalizeGenieHostInput(document.getElementById('setting-sovits-host').value),
         sovits_host: normalizeGenieHostInput(document.getElementById('setting-sovits-host').value),
         middleware_api_key: document.getElementById('setting-middleware-api-key').value,
+        middleware_admin_password: (document.getElementById('setting-admin-panel-password') || {}).value || '',
         tts_engine: 'genie',
         default_lang: document.getElementById('setting-default-lang').value,
 
@@ -737,7 +751,7 @@ async function saveSettings() {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/settings`, {
+        const response = await adminFetch(`${API_BASE}/settings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(settings)
@@ -1283,7 +1297,7 @@ async function performUpdate() {
 async function testGenieConnection() {
     showNotification('正在测试 Genie API...', 'info');
     try {
-        const response = await fetch(`${GENIE_API}/test`);
+        const response = await adminFetch(`${GENIE_API}/test`);
         const data = await response.json();
         if (data.success) {
             showNotification(`Genie 连接成功: ${data.url}`, 'success');
@@ -1298,7 +1312,7 @@ async function testGenieConnection() {
 
 async function loadGenieDashboardCard() {
     try {
-        const response = await fetch(`${GENIE_API}/status`);
+        const response = await adminFetch(`${GENIE_API}/status`);
         if (!response.ok) return;
         const data = await response.json();
         const badge = document.getElementById('sovits-install-status');
