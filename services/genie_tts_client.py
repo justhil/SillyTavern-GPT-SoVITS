@@ -83,7 +83,7 @@ def synthesize(
     host: str,
     genie_name: str,
     text: str,
-    split_sentence: bool = True,
+    split_sentence: bool = False,
 ) -> bytes:
     r = _post(
         host,

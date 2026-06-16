@@ -23,7 +23,7 @@ def _synthesize_to_wav(
         from services.genie_bridge import prepare_genie_session
         from services.genie_tts_client import synthesize as genie_synthesize
         host, gname = prepare_genie_session(char_name, ref_audio_path, prompt_text or "", prompt_lang)
-        return genie_synthesize(host, gname, text, split_sentence=True)
+        return genie_synthesize(host, gname, text, split_sentence=False)
     url = f"{get_sovits_host()}/tts"
     params = {
         "text": text,

@@ -34,7 +34,7 @@ class TTSService:
                 host,
                 gname,
                 segment.text,
-                split_sentence=tts_config.get("split_sentence", True),
+                split_sentence=tts_config.get("split_sentence", False),
             )
 
         url = f"{self.sovits_host}/tts"
