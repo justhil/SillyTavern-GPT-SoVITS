@@ -8,14 +8,18 @@ from typing import List
 from services.genie_tts_client import pcm_to_wav_bytes, synthesize as genie_synthesize
 
 # 单段超过此长度则尝试拆分（字符数）
-CHUNK_THRESHOLD = 72
-MAX_CHUNK = 48
+CHUNK_THRESHOLD = 50
+MAX_CHUNK = 36
 
-_SPLIT_RE = re.compile(r"(?<=[。！？；\n])|(?<=[，、])")
+_SPLIT_RE = re.compile(r"(?<=[。！？；\n])|(?<=[，、])|(?<=……)|(?<=…)")
+
+
+def _normalize_ellipsis(text: str) -> str:
+    return re.sub(r"……+", "……", text)
 
 
 def split_text_for_genie(text: str) -> List[str]:
-    text = (text or "").strip()
+    text = _normalize_ellipsis((text or "").strip())
     if not text:
         return []
     if len(text) <= CHUNK_THRESHOLD:
