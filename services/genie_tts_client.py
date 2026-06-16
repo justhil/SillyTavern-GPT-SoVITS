@@ -97,6 +97,8 @@ def synthesize(
     )
     if r.status_code != 200:
         raise RuntimeError(f"Genie tts failed: {r.status_code} {r.text[:300]}")
+    if len(r.content) < 256:
+        raise RuntimeError(f"Genie /tts 响应过短 ({len(r.content)} bytes)")
     return pcm_to_wav_bytes(r.content)
 
 

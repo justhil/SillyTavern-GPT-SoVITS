@@ -21,9 +21,9 @@ def _synthesize_to_wav(
 ) -> bytes:
     if get_tts_engine() == "genie":
         from services.genie_bridge import prepare_genie_session
-        from services.genie_tts_client import synthesize as genie_synthesize
+        from services.genie_chunk_tts import synthesize_genie_chunked
         host, gname = prepare_genie_session(char_name, ref_audio_path, prompt_text or "", prompt_lang)
-        return genie_synthesize(host, gname, text, split_sentence=False)
+        return synthesize_genie_chunked(host, gname, text, split_sentence=False)
     url = f"{get_sovits_host()}/tts"
     params = {
         "text": text,
